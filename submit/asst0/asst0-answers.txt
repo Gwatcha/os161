@@ -1,0 +1,45 @@
+*sys161 output*
+    sys161: System/161 release 2.0.3, compiled Sep  7 2018 19:43:45
+    sys161: Usage: sys161 [sys161 options] kernel [kernel args...]
+    sys161:    sys161 options:
+    sys161:      -c config      Use alternate config file
+    sys161:      -D count       Set disk I/O doom counter
+    sys161:      -f file        (trace161 only)
+    sys161:      -P             (trace161 only)
+    sys161:      -p port        Listen for gdb over TCP on specified port
+    sys161:      -s             Pass signal-generating characters through
+    sys161:      -t[flags]      (trace161 only)
+    sys161:      -w             Wait for debugger before starting
+    sys161:      -X             Don't wait for debugger; exit instead
+    sys161:      -Z seconds     Set watchdog timer to specified time
+
+*git log*
+    commit 8b5a08570834691a3025612d384d52238fc7dd31
+    Author: Michael Muszynski <michael@debby.telus>
+    Date:   Fri Sep 7 18:54:54 2018 -0700
+        src is now master folder
+    commit 185e84377fb7623505a1e4c5594769d1f940be96
+    Author: Michael Muszynski <michael@debby.telus>
+    Date:   Fri Sep 7 18:53:16 2018 -0700
+        src is now master folder
+    commit 868314a0dcddcfed35f7bfadca52b827baffa9e1
+    Author: Michael Muszynski <michael@debby.telus>
+    Date:   Fri Sep 7 18:51:02 2018 -0700
+        Got rid of readme file
+    commit 05f134ab6aa5efa749cd4bbfff76f2e33bba27d9
+    Author: Michael Muszynski <michael@debby.telus>
+    Date:   Fri Sep 7 18:36:17 2018 -0700
+        Initial commit of os161 src
+    commit 3bc4854b334d1b6fa0062bc6587ed1d0a5f0333d
+    Author: Michael Muszynski <michaelampm@gmail.com>
+    Date:   Sat Sep 8 00:59:48 2018 +0000
+        README.md edited online with Bitbucket
+    commit 7bcd9283e23e69bd88b00d0cb86ff7e7cb0011ca
+    Author: Michael Muszynski <michaelampm@gmail.com>
+    Date:   Sat Sep 8 00:57:29 2018 +0000
+        Initial commit
+
+*git tag*
+    asst0-start
+
+
