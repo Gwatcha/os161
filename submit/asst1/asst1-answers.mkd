@@ -19,43 +19,46 @@
 >   `jal    0x800139d0 <kmain>`
 
 6. Step through the `boot()` code to find out what functions are called during early initialization. Paste the gdb output that shows you what these functions are.
-   `108             /* Early initialization. */`
-   `109             ram_bootstrap();`
-   `110             proc_bootstrap();`
-   `111             thread_bootstrap();`
-   `112             hardclock_bootstrap();`
-   `113             vfs_bootstrap();`
-   `114             kheap_nextgeneration();`
-   `115`
-   `116             /* Probe and initialize devices. Interrupts should come on.*/`
+>
+```
+   108             /* Early initialization. */
+   109             ram_bootstrap();
+   110             proc_bootstrap();
+   111             thread_bootstrap();
+   112             hardclock_bootstrap();
+   113             vfs_bootstrap();
+   114             kheap_nextgeneration();
+   115
+   116             /* Probe and initialize devices. Interrupts should come on.*/
    >>> list
-   `117             kprintf("Device probe...\n");`
-   `118             KASSERT(curthread->t_curspl > 0);`
-   `119             mainbus_bootstrap();`
-   `120             KASSERT(curthread->t_curspl == 0);`
-   `121             /* Now do pseudo-devices. */`
-   `122             pseudoconfig();`
-   `123             kprintf("\n");`
-   `124             kheap_nextgeneration();`
-   `125`
-   `126             /* Late phase of initialization. */`
+   117             kprintf("Device probe...\n");
+   118             KASSERT(curthread->t_curspl > 0);
+   119             mainbus_bootstrap();
+   120             KASSERT(curthread->t_curspl == 0);
+   121             /* Now do pseudo-devices. */
+   122             pseudoconfig();
+   123             kprintf("\n");
+   124             kheap_nextgeneration();
+   125
+   126             /* Late phase of initialization. */
    >>> list
-   `127             vm_bootstrap();`
-   `128             kprintf_bootstrap();`
-   `129             thread_start_cpus();`
-   `130`
-   `131             /* Default bootfs - but ignore failure, in case emu0 doesn't exist */`
-   `132             vfs_setbootfs("emu0");`
-   `133`
-   `134             kheap_nextgeneration();`
-   `135`
-   `136             /*`
+   127             vm_bootstrap();
+   128             kprintf_bootstrap();
+   129             thread_start_cpus();
+   130
+   131             /* Default bootfs - but ignore failure, in case emu0 doesn't exist */
+   132             vfs_setbootfs("emu0");
+   133
+   134             kheap_nextgeneration();
+   135
+   136             /*
    >>> list
-   `137              * Make sure various things aren't screwed up.`
-   `138              */`
-   `139             COMPILE_ASSERT(sizeof(userptr_t) == sizeof(char *));`
-   `140             COMPILE_ASSERT(sizeof(*(userptr_t)0) == sizeof(char));`
-   `141     }`
+   137              * Make sure various things aren't screwed up.
+   138              */
+   139             COMPILE_ASSERT(sizeof(userptr_t) == sizeof(char *));
+   140             COMPILE_ASSERT(sizeof(*(userptr_t)0) == sizeof(char));
+   141     }
+```
        
    
 7. Set a breakpoint in `thread_bootstrap()`. Once you hit that breakpoint, at the very first line of that function, attempt to print the contents of the *bootcpu variable. Copy the output into the submit file. 
