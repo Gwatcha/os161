@@ -19,7 +19,6 @@
 >   `jal    0x800139d0 <kmain>`
 
 6. Step through the `boot()` code to find out what functions are called during early initialization. Paste the gdb output that shows you what these functions are.
->
 ```
    108             /* Early initialization. */
    109             ram_bootstrap();
