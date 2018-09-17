@@ -29,7 +29,7 @@
     commit 05f134ab6aa5efa749cd4bbfff76f2e33bba27d9
     Author: Michael Muszynski <michael@debby.telus>
     Date:   Fri Sep 7 18:36:17 2018 -0700
-        Initial commit of os161 src
+    Initial commit of os161 src
     commit 3bc4854b334d1b6fa0062bc6587ed1d0a5f0333d
     Author: Michael Muszynski <michaelampm@gmail.com>
     Date:   Sat Sep 8 00:59:48 2018 +0000
@@ -42,4 +42,130 @@
 *git tag*
     asst0-start
 
+*questions*
+Question 1: In the book chapters and in class you were introduced to the mechanisms used to transfer control between user processes and the operating system. Tell us where we can find the first line of OS/161 code that is executed when a trap occurs. Then tell us where control gets transferred to from that point. What about an interrupt? How does that differ?
 
+Question 2: Making a system call, such as write, ultimately leads to a trap. Find the code in OS/161 that invokes system calls from user programs and causes traps. In which file and on which lines did you find this code?
+
+Question 3: Why do you suppose there are libc functions in the "common" part of the source tree (common/libc) as well as in userland/lib/libc?
+Below is a brief overview of the organization of the source tree, and a description of what goes where.
+
+Question 4: Name two things that configure configures. What might invalidate that configuration and make you need/want to rerun it?
+
+Question 5: What are some of the details which would make a function "machine dependent"? Why might it be important to maintain this separation, instead of just putting all of the code in one function?
+
+Question 6: How large is a trapframe? Why?
+kern/arch/sys161/conf/conf.arch -- Similar to mips/conf/conf.arch.
+
+Question 7: Under what circumstances should you re-run the kern/conf/config script?
+
+Question 8: Under what circumstances should you run bmake depend in kern/compile/DUMBVM?
+
+Question 9: Under what circumstances should you run bmake or bmake install in kern/compile/DUMBVM?
+
+Question 10: When you booted your kernel, you found that there were several commands that you could issue to experiment with it. Explain exactly where and what you would have to do to add a command that printed out, "Hello world!"
+
+Question 11: Why do we need to include these in your OS/161 distribution? Why can't you just use the standard utilities that are present on the machine on which you're working?
+
+Question 12: When a user program exits, what is done with the program's return value?
+
+Question 13: Imagine that you wanted to add a new system call. List all the places that you would need to modify/add code. Then review your answers to questions 7-9 and note which of those actions you need to take in order to test the new system call.  
+
+
+                                                                        *ANSWERS*
+
+    1.  
+        The first line of code when a fault occurs, or any exception, is at os161/src/kern/arch/mips/locore/exception-mips1.S line 87. It saves the trap frame and then transfers control to mips_trap at line 126 in os161/src/kern/arch/mips/locore/trap.c
+
+        It seems like exception-mips1.S works for interrupts as well. When trap.c is called, it is passed the trapcodename for an interrupt (0), and calls the interrupt dispatcher to deal with the interrupt.
+
+        Interrupt or not, it then returns to the ..mips1.S file and it handles switching back to the process interrupted, which includes restoring the trap frame.
+
+    *2. 
+         os161/src/build/userland/lib/libc/syscalls.S, line 85 'syscall', in function __syscall, is the last instruction executed in usermode before a system call. This command transfers control to the Kernel.
+
+         Functions with defined headers in the unistd.h file probably call SYSCALL(sym, num) (function above syscall) with the number for their system call. SYSCALL then makes sure that the number is in the proper spot (v0), and executes 'syscall' which changes the processor into Kernel mode.
+
+         Then we are in exception-mips1.S.
+    3. 
+        So we have access to them whilst building our Kernel.
+
+    4.
+        configure generates makefile definitions which are used in the OS/161 build process. Two things it does is specify the platform the OS will run on and specify the location of the OS tree. 
+
+        If I were running OS/161 on a different platform (not sys161) or machine (not mips), then I'd need to rerun config to create new flags. 
+
+    5.
+        If it were to manipulate special registers or if the function had to be in a specific memory location or other low-level lines of code that presuppose an underlying architecture.
+        
+       It is important to seperate them because it modularizes machine-specific functions. If it's modularized, only the interface and funtionality matters to other code and  if this is true, we can change our machine-specific instructions - possibly to use other architectures - without messing with anything else 
+
+    6. 
+        148 bytes in the C-struct , but the assembly allocates 168 bytes for 4  more words for a minimal argument block, plus
+        one more for proper (64-bit) stack alignment.
+
+        It needs space to save the state for a process, this includes the 31 MIP's registers as well as the vaddr, cause, epc, $lo, $hi, and status registers.
+
+    7. 
+        If you want to compile a different version of a Kernel. The kernel configuration presets are provided in the same directory (i.e DUMBVM-OPT, DUMBVM) and they are passed to ./config as a parameter. A reason why you would change the config script is to remove or add certain device support, or disable a feature such as the filesystem. 
+
+        The config script generates a directory under the name of the preset in /src/kern/compile and populates it with header files (seems like some are for the devices) as well as a Makefile.
+
+
+    8. 
+        I'd run 'bmake depend' everytime before running bmake to build a new kernel, this might be unnecessary, but it takes little time so might as well. Running bmake depend updates/creates many .depend.* files in the /kern/compile/[KERNELNAME] directory, one for each  .S file or .c file. The depend.* files contain paths to files the .c or .S file depends on (libraries, .h files, functions outside of the file... etc..). 
+
+        All of these .depend.* files are then funneled into one .depend file, which I imagine is utilized in the next step when the Kernel is built using bmake - since gcc and thus bmake require the paths for dependencies to be specified during compilation,
+
+    9.
+        bmake - this is used to execute the Makefile and compile all the components of the new kernel into .o files which populate the directory we are in (/kern/compile/[KERNALTYPE]). It then links them together to finish building the main 'kernel' file, which contains machine code for the new kernel in the form of an ELF 32-bit MSB executable file.
+
+        bmake install echos the commands it performs, they are:
+[ -d /home/michael/Documents/softworkspace/os161/root ] || mkdir /home/michael/Documents/softworkspace/os161/root
+cp kernel /home/michael/Documents/softworkspace/os161/root/kernel-DUMBVM-OPT
+rm -f /home/michael/Documents/softworkspace/os161/root/kernel
+ln -s kernel-DUMBVM-OPT /home/michael/Documents/softworkspace/os161/root/kernel
+
+        this makes the /os161/root directory and copies the newly built kernel into it, with the name kernel-[KERNELTYPE], in this case kernel-DUMBVM-OPT.It then removes the current kernel named 'kernel' in root, and creates a new one which is soft linked to the kernel-DUMBVM-OPT kernel.
+
+        So I would run bmake (after doing all the prerequisite tasks) to build a kernel. I would run bmake install to copy this kernel for use in the os161/root directory.
+
+    10. 
+        First I would add my function into the cmdtable in src/kern/main/menu.c (530), this allows the cmd_dispatcher to call it. The second field in my new entry would be the name of my function, 'cmd_helloworld'.
+
+        Then I would add a function in the same file,  'static int cmd_helloworld(void)'.
+
+        This helloworld function would simply kprintf a line and return.
+
+
+    11. 
+        User programs which run on the OS161 and virtual mips processor may want to use these standard utilities, same with the shell. Since they run in sys161 they do not see the standard utilities on my computer so they can not use those instead. 
+
+    12. 
+        This can be found in the src/kern/main/menu.c file. THe program is forked onto a seperate thread and at line (90), the result is checked for a -1, otherwise it simply returns, doing nothing with it.
+
+   89   result = runprogram(progname);
+   90         if (result) {
+   91                 kprintf("Running program %s failed: %s\n", args[0],
+   92                         strerror(result));
+   93                 return;
+94         }
+        
+    13. 
+        1. Link a system call number to our system call in src/build/install/include/kern/syscall.h 
+
+        Do this by doing #define SYS_newcall 121
+
+        Also add SYSCALL(newcall, 121) in src/build/userland/lib/libc/syscalls.S, but I think this is optional as gensyscalls.sh takes kern/syscall.h and puts it there for you.
+ 
+        2. Add a case in the switch statement in kern/arch/mips/syscall/syscall.c (102) which contains the name of our new syscall. In the switch, call our soon to be new syscall function by adding a line:
+        err = newcall((userptr_t)tf->a0); //newcall takes one parameter
+
+        3. Add our system call header into the src/kern/include/syscall.h file so syscall.c can find it.
+
+        4. Write our system call by making a new c file in src/kern/syscall/newcall.c. Be sure to #include <syscall.h>
+
+        5. Create a way for a user program to call our system call. Do this by adding our system call definition into /userland/include/unistd.h, being sure to match the definition created in step 1.
+
+        6. #include <unistd.h> in a user program and call our system call.
+        
