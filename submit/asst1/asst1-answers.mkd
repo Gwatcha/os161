@@ -1,0 +1,65 @@
+
+## Asst1 CPEN331, Michael M, 22756167
+
+1. What is the name of the very first function that executes when OS161 starts up? 
+>   `__start` at start.S:54
+
+2. What is the very first assembly instruction that executes? 
+>    `addiu sp,sp,-24`
+
+3. Set the breakpoints in the kernel function that shows the menu and in the kernel main function. Now tell GDB to display all the breakpoints that were set and copy the output to your submit file. 
+>     `Num     Type           Disp Enb Address    What`
+>   `1       breakpoint     keep y   0x800139e4 in kmain at ../../main/main.c:211`
+>   `2       breakpoint     keep y   0x80014a0c in menu at ../../main/menu.c:697`
+
+4. Briefly describe what happens between the beginning of the execution and the invocation of the kernel main function. 
+> It does multiple things, first it sets up a boot stack for the first processor   at the top of physical memory, then it stores the boot argument string into s0, then it copies the exception code into the proper locations in physical memory, then flushes the instruction cache, initializes the TLB, and then sets up the status register as well as `c0_context` register and `_gp` register. 
+
+5. What is the assembly language instruction that calls the kernel main function? 
+>   `jal    0x800139d0 <kmain>`
+
+6. Step through the `boot()` code to find out what functions are called during early initialization. Paste the gdb output that shows you what these functions are.
+   `108             /* Early initialization. */`
+   `109             ram_bootstrap();`
+   `110             proc_bootstrap();`
+   `111             thread_bootstrap();`
+   `112             hardclock_bootstrap();`
+   `113             vfs_bootstrap();`
+   `114             kheap_nextgeneration();`
+   `115`
+   `116             /* Probe and initialize devices. Interrupts should come on.*/`
+   >>> list
+   `117             kprintf("Device probe...\n");`
+   `118             KASSERT(curthread->t_curspl > 0);`
+   `119             mainbus_bootstrap();`
+   `120             KASSERT(curthread->t_curspl == 0);`
+   `121             /* Now do pseudo-devices. */`
+   `122             pseudoconfig();`
+   `123             kprintf("\n");`
+   `124             kheap_nextgeneration();`
+   `125`
+   `126             /* Late phase of initialization. */`
+   >>> list
+   `127             vm_bootstrap();`
+   `128             kprintf_bootstrap();`
+   `129             thread_start_cpus();`
+   `130`
+   `131             /* Default bootfs - but ignore failure, in case emu0 doesn't exist */`
+   `132             vfs_setbootfs("emu0");`
+   `133`
+   `134             kheap_nextgeneration();`
+   `135`
+   `136             /*`
+   >>> list
+   `137              * Make sure various things aren't screwed up.`
+   `138              */`
+   `139             COMPILE_ASSERT(sizeof(userptr_t) == sizeof(char *));`
+   `140             COMPILE_ASSERT(sizeof(*(userptr_t)0) == sizeof(char));`
+   `141     }`
+       
+   
+7. Set a breakpoint in `thread_bootstrap()`. Once you hit that breakpoint, at the very first line of that function, attempt to print the contents of the *bootcpu variable. Copy the output into the submit file. 
+>    (struct cpu *) 0x80000
+
+8. Now, step through that function until after the line that says `bootcpu = cpu_create(0)`. Now print the content of `*bootcpu` and paste the output. 
+>   (struct cpu *) 0x8003af00 
