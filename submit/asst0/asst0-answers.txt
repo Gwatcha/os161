@@ -81,7 +81,7 @@ Question 13: Imagine that you wanted to add a new system call. List all the plac
 
         Interrupt or not, it then returns to the ..mips1.S file and it handles switching back to the process interrupted, which includes restoring the trap frame.
 
-    *2. 
+    2. 
          os161/src/build/userland/lib/libc/syscalls.S, line 85 'syscall', in function __syscall, is the last instruction executed in usermode before a system call. This command transfers control to the Kernel.
 
          Functions with defined headers in the unistd.h file probably call SYSCALL(sym, num) (function above syscall) with the number for their system call. SYSCALL then makes sure that the number is in the proper spot (v0), and executes 'syscall' which changes the processor into Kernel mode.

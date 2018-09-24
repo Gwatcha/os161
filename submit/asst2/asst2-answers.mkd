@@ -1,0 +1,33 @@
+1. What happens to a thread when it exits (i.e., calls `thread_exit()`)? What about when it sleeps? 
+> The `thread_exit` function in src/kern/thread/thread.c (777) is called. The thread detach's from it's process, then interrupts are turned off using `splhigh()` (in kern/include/spl.h) and the thread is switched to `S_ZOMBIE`.
+ 
+2. What function(s) handle(s) a context switch?
+> `static void thread_switch(threadstate_t newstate, struct wchan *wc, struct spinlock *lk)` src/kern/thread/thread.c (560)
+
+
+3. What does it mean for a thread to be in each of the possible thread states?
+> `S_RUN` - Currently running
+> `S_READY` - Ready to run
+> `S_SLEEP` - Sleeping
+> `S_ZOMBIE` - Exited but not yet deleted.
+
+4. What does it mean to turn interrupts off? How is this accomplished? Why is it important to turn off interrupts in the thread subsystem code?
+> To turn interrupts off means to set the threads interrupt priority to `IPL_HIGH`, which turns all interrupts off. This is accomplished through calling `int splhigh(void)` in kern/include/spl.h. This function then calls `splx(IPL_HIGH)` in /kern/thread/spl.c and this sets the the priority level for the `curthread` (macro defined in kern/include/current.h) to high. It is important because there are critical sections in the thread subsystem code in which interrupts may cause deadlocks or other hazards.
+
+5. What happens when a thread wakes up another thread? How does a sleeping thread get to run again?
+> That thread eventually calls `void wchan_wakeone(struct wchan *wc, struct spinlock *kl)` and this function wakes up a sleeping thread. It does this by grabbing the thread from the wait channel and calling `thread_make_runnable(target,false)`. This function then adds the thread to the cpu's runqueue. (All functions in /kern/thread/thread.c).
+
+6. What function(s) choose(s) the next thread to run?
+> `void schedule(void)`, 
+
+7. How does it (do they) pick the next thread?
+> Currently threads run in a round-robin fashion.
+
+8. What role does the hardware timer play in scheduling? What hardware independent function is called on a timer interrupt?
+> `void hardclock(void)` in kern/thread/clock.c (93) is called HZ times a second on each processor by the timer code. This thread considers calling `thread_consider_migration();`, `schedule();`, and always calls `thread_yield();` (functions in /thread.c). This function is called by the `ltimer_irq` in /kern/dev/lamebus/ltimer.c. 
+
+9. Describe how `wchan_sleep()` and `wchan_wakeone()` are used to implement semaphores. 
+> If the `sem->sem_count==0` in P, then the thread calls `wchan_sleep()` with the spinlock held - this function then puts this thread to sleep on the semaphores particular wait channel and then does a context switch to the next thread in line on the runqueue. `wchan_wakeone` acquires the spinlock and wakes one thread up on the semaphores wait channel before releasing the spinlock.
+
+10. How does the implementation of wchan ensure that a thread never misses a wakeup signal: that another thread cannot attempt to awaken the first thread just as it is preparing to sleep, but before it is actually placed into the sleep queue?
+> This is done by keeping the wait channels associated spinlock locked from the point the caller of `wchan_sleep` locked it until the thread is on the list. This way, there is no race between `wchan_sleep` and `wchan_wakeone`.
