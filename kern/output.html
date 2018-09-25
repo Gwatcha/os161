@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<style type="text/css">
+
+ html, body {
+   padding: 0px;
+   margin: 0px;
+   width: 100%;
+   height: 100%;
+   overflow: hidden;
+ }
+
+ .node {
+   cursor: pointer;
+ }
+
+ .overlay{
+   background-color:#EEE;
+ }
+
+ .node circle {
+   fill: #fff;
+   stroke: steelblue;
+   stroke-width: 1.5px;
+ }
+
+ .node text {
+   font-size:10px;
+   font-family:sans-serif;
+ }
+
+ .link {
+   fill: none;
+   stroke: #ccc;
+   stroke-width: 1.5px;
+ }
+</style>
+<body>
+  <div id="tree-container"></div>
+<script src="http://code.jquery.com/jquery-1.10.2.min.js"></script>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script>
+  /*Copyright (c) 2013-2016, Rob Schmuecker
+  All rights reserved.
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met:
+
+  * Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+  * Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+  * The name Rob Schmuecker may not be used to endorse or promote products
+  derived from this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  DISCLAIMED. IN NO EVENT SHALL MICHAEL BOSTOCK BE LIABLE FOR ANY DIRECT,
+  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+  OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
+
+ treeData = {"name":"/","children":[{"name":"arch","children":[{"name":"mips","children":[{"name":"conf","children":[{"name":"conf.arch","children":[]},{"name":"ldscript","children":[]}]},{"name":"include","children":[{"name":"current.h","children":[]},{"name":"elf.h","children":[]},{"name":"kern","children":[{"name":"endian.h","children":[]},{"name":"regdefs.h","children":[]},{"name":"setjmp.h","children":[]},{"name":"signal.h","children":[]},{"name":"types.h","children":[]}]},{"name":"membar.h","children":[]},{"name":"specialreg.h","children":[]},{"name":"spinlock.h","children":[]},{"name":"thread.h","children":[]},{"name":"tlb.h","children":[]},{"name":"trapframe.h","children":[]},{"name":"types.h","children":[]},{"name":"vm.h","children":[]}]},{"name":"locore","children":[{"name":"cache-mips161.S","children":[]},{"name":"exception-mips1.S","children":[]},{"name":"trap.c","children":[]}]},{"name":"syscall","children":[{"name":"syscall.c","children":[]}]},{"name":"thread","children":[{"name":"cpu.c","children":[]},{"name":"switchframe.c","children":[]},{"name":"switchframe.h","children":[]},{"name":"switch.S","children":[]},{"name":"thread_machdep.c","children":[]},{"name":"threadstart.S","children":[]}]},{"name":"vm","children":[{"name":"dumbvm.c","children":[]},{"name":"ram.c","children":[]},{"name":"tlb-mips161.S","children":[]}]}]},{"name":"sys161","children":[{"name":"conf","children":[{"name":"conf.arch","children":[]}]},{"name":"dev","children":[{"name":"lamebus_machdep.c","children":[]}]},{"name":"include","children":[{"name":"bus.h","children":[]},{"name":"maxcpus.h","children":[]}]},{"name":"main","children":[{"name":"start.S","children":[]}]}]}]},{"name":"compile","children":[{"name":"DUMBVM","children":[{"name":"adddi3.o","children":[]},{"name":"anddi3.o","children":[]},{"name":"array.o","children":[]},{"name":"arraytest.o","children":[]},{"name":"ashldi3.o","children":[]},{"name":"ashrdi3.o","children":[]},{"name":"atoi.o","children":[]},{"name":"autoconf.c","children":[]},{"name":"autoconf.h","children":[]},{"name":"autoconf.o","children":[]},{"name":"beep_ltimer.o","children":[]},{"name":"beep.o","children":[]},{"name":"bitmap.o","children":[]},{"name":"bitmaptest.o","children":[]},{"name":"bswap.o","children":[]},{"name":"bzero.o","children":[]},{"name":"cache-mips161.o","children":[]},{"name":"clock.o","children":[]},{"name":"cmpdi2.o","children":[]},{"name":"con_lser.o","children":[]},{"name":"console.o","children":[]},{"name":"copyinout.o","children":[]},{"name":"cpu.o","children":[]},{"name":"device.o","children":[]},{"name":"devnull.o","children":[]},{"name":"divdi3.o","children":[]},{"name":"dumbvm.o","children":[]},{"name":"emu_att.o","children":[]},{"name":"emu.o","children":[]},{"name":"exception-mips1.o","children":[]},{"name":"files.mk","children":[]},{"name":"fstest.o","children":[]},{"name":"includelinks","children":[{"name":"kern","children":[{"name":"machine","children":[]},{"name":"mips","children":[]}]},{"name":"machine","children":[]},{"name":"mips","children":[]},{"name":"platform","children":[]},{"name":"sys161","children":[]}]},{"name":"iordi3.o","children":[]},{"name":"kernel","children":[]},{"name":"kgets.o","children":[]},{"name":"kmalloc.o","children":[]},{"name":"kprintf.o","children":[]},{"name":"lamebus_machdep.o","children":[]},{"name":"lamebus.o","children":[]},{"name":"lhd_att.o","children":[]},{"name":"lhd.o","children":[]},{"name":"loadelf.o","children":[]},{"name":"lrandom_att.o","children":[]},{"name":"lrandom.o","children":[]},{"name":"lser_att.o","children":[]},{"name":"lser.o","children":[]},{"name":"lshldi3.o","children":[]},{"name":"lshrdi3.o","children":[]},{"name":"ltimer_att.o","children":[]},{"name":"ltimer.o","children":[]},{"name":"ltrace_att.o","children":[]},{"name":"ltrace.o","children":[]},{"name":"main.o","children":[]},{"name":"Makefile","children":[]},{"name":"malloctest.o","children":[]},{"name":"memcpy.o","children":[]},{"name":"memmove.o","children":[]},{"name":"memset.o","children":[]},{"name":"menu.o","children":[]},{"name":"misc.o","children":[]},{"name":"moddi3.o","children":[]},{"name":"muldi3.o","children":[]},{"name":"negdi2.o","children":[]},{"name":"notdi2.o","children":[]},{"name":"opt-dumbvm.h","children":[]},{"name":"opt-netfs.h","children":[]},{"name":"opt-net.h","children":[]},{"name":"opt-noasserts.h","children":[]},{"name":"opt-semfs.h","children":[]},{"name":"opt-sfs.h","children":[]},{"name":"__printf.o","children":[]},{"name":"proc.o","children":[]},{"name":"qdivrem.o","children":[]},{"name":"ram.o","children":[]},{"name":"random_lrandom.o","children":[]},{"name":"random.o","children":[]},{"name":"rtclock_ltimer.o","children":[]},{"name":"rtclock.o","children":[]},{"name":"runprogram.o","children":[]},{"name":"semfs_fsops.o","children":[]},{"name":"semfs_obj.o","children":[]},{"name":"semfs_vnops.o","children":[]},{"name":"setjmp.o","children":[]},{"name":"sfs_balloc.o","children":[]},{"name":"sfs_bmap.o","children":[]},{"name":"sfs_dir.o","children":[]},{"name":"sfs_fsops.o","children":[]},{"name":"sfs_inode.o","children":[]},{"name":"sfs_io.o","children":[]},{"name":"sfs_vnops.o","children":[]},{"name":"snprintf.o","children":[]},{"name":"spinlock.o","children":[]},{"name":"spl.o","children":[]},{"name":"start.o","children":[]},{"name":"strcat.o","children":[]},{"name":"strchr.o","children":[]},{"name":"strcmp.o","children":[]},{"name":"strcpy.o","children":[]},{"name":"strlen.o","children":[]},{"name":"strrchr.o","children":[]},{"name":"strtok_r.o","children":[]},{"name":"subdi3.o","children":[]},{"name":"switchframe.o","children":[]},{"name":"switch.o","children":[]},{"name":"synch.o","children":[]},{"name":"synchtest.o","children":[]},{"name":"syscall.o","children":[]},{"name":"threadlist.o","children":[]},{"name":"threadlisttest.o","children":[]},{"name":"thread_machdep.o","children":[]},{"name":"thread.o","children":[]},{"name":"threadstart.o","children":[]},{"name":"threadtest.o","children":[]},{"name":"time.o","children":[]},{"name":"time_syscalls.o","children":[]},{"name":"tlb-mips161.o","children":[]},{"name":"trap.o","children":[]},{"name":"tt3.o","children":[]},{"name":"ucmpdi2.o","children":[]},{"name":"udivdi3.o","children":[]},{"name":"uio.o","children":[]},{"name":"umoddi3.o","children":[]},{"name":"vers.c","children":[]},{"name":"version","children":[]},{"name":"vers.o","children":[]},{"name":"vfscwd.o","children":[]},{"name":"vfsfail.o","children":[]},{"name":"vfslist.o","children":[]},{"name":"vfslookup.o","children":[]},{"name":"vfspath.o","children":[]},{"name":"vnode.o","children":[]},{"name":"xordi3.o","children":[]}]}]},{"name":"conf","children":[{"name":"config","children":[]},{"name":"conf.kern","children":[]},{"name":"DUMBVM","children":[]},{"name":"DUMBVM-OPT","children":[]},{"name":"GENERIC","children":[]},{"name":"GENERIC-OPT","children":[]},{"name":"newvers.sh","children":[]}]},{"name":"dev","children":[{"name":"generic","children":[{"name":"beep.c","children":[]},{"name":"beep.h","children":[]},{"name":"console.c","children":[]},{"name":"console.h","children":[]},{"name":"random.c","children":[]},{"name":"random.h","children":[]},{"name":"rtclock.c","children":[]},{"name":"rtclock.h","children":[]}]},{"name":"lamebus","children":[{"name":"beep_ltimer.c","children":[]},{"name":"conf.lamebus","children":[]},{"name":"con_lscreen.c","children":[]},{"name":"con_lser.c","children":[]},{"name":"emu_att.c","children":[]},{"name":"emu.c","children":[]},{"name":"emu.h","children":[]},{"name":"lamebus.c","children":[]},{"name":"lamebus.h","children":[]},{"name":"lhd_att.c","children":[]},{"name":"lhd.c","children":[]},{"name":"lhd.h","children":[]},{"name":"lnet_att.c","children":[]},{"name":"lnet.c","children":[]},{"name":"lrandom_att.c","children":[]},{"name":"lrandom.c","children":[]},{"name":"lrandom.h","children":[]},{"name":"lscreen_att.c","children":[]},{"name":"lscreen.c","children":[]},{"name":"lscreen.h","children":[]},{"name":"lser_att.c","children":[]},{"name":"lser.c","children":[]},{"name":"lser.h","children":[]},{"name":"ltimer_att.c","children":[]},{"name":"ltimer.c","children":[]},{"name":"ltimer.h","children":[]},{"name":"ltrace_att.c","children":[]},{"name":"ltrace.c","children":[]},{"name":"ltrace.h","children":[]},{"name":"random_lrandom.c","children":[]},{"name":"rtclock_ltimer.c","children":[]}]}]},{"name":"fs","children":[{"name":"semfs","children":[{"name":"semfs_fsops.c","children":[]},{"name":"semfs.h","children":[]},{"name":"semfs_obj.c","children":[]},{"name":"semfs_vnops.c","children":[]}]},{"name":"sfs","children":[{"name":"sfs_balloc.c","children":[]},{"name":"sfs_bmap.c","children":[]},{"name":"sfs_dir.c","children":[]},{"name":"sfs_fsops.c","children":[]},{"name":"sfs_inode.c","children":[]},{"name":"sfs_io.c","children":[]},{"name":"sfsprivate.h","children":[]},{"name":"sfs_vnops.c","children":[]}]}]},{"name":"gdbscripts","children":[{"name":"array","children":[]},{"name":"wchan","children":[]}]},{"name":"include","children":[{"name":"addrspace.h","children":[]},{"name":"array.h","children":[]},{"name":"bitmap.h","children":[]},{"name":"cdefs.h","children":[]},{"name":"clock.h","children":[]},{"name":"copyinout.h","children":[]},{"name":"cpu.h","children":[]},{"name":"current.h","children":[]},{"name":"device.h","children":[]},{"name":"elf.h","children":[]},{"name":"emufs.h","children":[]},{"name":"endian.h","children":[]},{"name":"fs.h","children":[]},{"name":"kern","children":[{"name":"endian.h","children":[]},{"name":"errmsg.h","children":[]},{"name":"errno.h","children":[]},{"name":"fcntl.h","children":[]},{"name":"ioctl.h","children":[]},{"name":"iovec.h","children":[]},{"name":"limits.h","children":[]},{"name":"reboot.h","children":[]},{"name":"resource.h","children":[]},{"name":"seek.h","children":[]},{"name":"sfs.h","children":[]},{"name":"signal.h","children":[]},{"name":"socket.h","children":[]},{"name":"stat.h","children":[]},{"name":"stattypes.h","children":[]},{"name":"syscall.h","children":[]},{"name":"time.h","children":[]},{"name":"types.h","children":[]},{"name":"unistd.h","children":[]},{"name":"wait.h","children":[]}]},{"name":"lib.h","children":[]},{"name":"limits.h","children":[]},{"name":"mainbus.h","children":[]},{"name":"membar.h","children":[]},{"name":"proc.h","children":[]},{"name":"setjmp.h","children":[]},{"name":"sfs.h","children":[]},{"name":"signal.h","children":[]},{"name":"spinlock.h","children":[]},{"name":"spl.h","children":[]},{"name":"stat.h","children":[]},{"name":"stdarg.h","children":[]},{"name":"synch.h","children":[]},{"name":"syscall.h","children":[]},{"name":"test.h","children":[]},{"name":"thread.h","children":[]},{"name":"threadlist.h","children":[]},{"name":"threadprivate.h","children":[]},{"name":"types.h","children":[]},{"name":"uio.h","children":[]},{"name":"version.h","children":[]},{"name":"vfs.h","children":[]},{"name":"vm.h","children":[]},{"name":"vnode.h","children":[]},{"name":"wchan.h","children":[]}]},{"name":"lib","children":[{"name":"array.c","children":[]},{"name":"bitmap.c","children":[]},{"name":"bswap.c","children":[]},{"name":"kgets.c","children":[]},{"name":"kprintf.c","children":[]},{"name":"misc.c","children":[]},{"name":"time.c","children":[]},{"name":"uio.c","children":[]}]},{"name":"main","children":[{"name":"main.c","children":[]},{"name":"menu.c","children":[]}]},{"name":"Makefile","children":[]},{"name":"proc","children":[{"name":"proc.c","children":[]}]},{"name":"syscall","children":[{"name":"loadelf.c","children":[]},{"name":"runprogram.c","children":[]},{"name":"time_syscalls.c","children":[]}]},{"name":"test","children":[{"name":"arraytest.c","children":[]},{"name":"bitmaptest.c","children":[]},{"name":"fstest.c","children":[]},{"name":"kmalloctest.c","children":[]},{"name":"malloctest.c","children":[]},{"name":"nettest.c","children":[]},{"name":"synchtest.c","children":[]},{"name":"threadlisttest.c","children":[]},{"name":"threadtest.c","children":[]},{"name":"tt3.c","children":[]}]},{"name":"thread","children":[{"name":"clock.c","children":[]},{"name":"spinlock.c","children":[]},{"name":"spl.c","children":[]},{"name":"synch.c","children":[]},{"name":"thread.c","children":[]},{"name":"threadlist.c","children":[]}]},{"name":"tree.html","children":[]},{"name":"treemap.html","children":[]},{"name":"vfs","children":[{"name":"device.c","children":[]},{"name":"devnull.c","children":[]},{"name":"vfscwd.c","children":[]},{"name":"vfsfail.c","children":[]},{"name":"vfslist.c","children":[]},{"name":"vfslookup.c","children":[]},{"name":"vfspath.c","children":[]},{"name":"vnode.c","children":[]}]},{"name":"vm","children":[{"name":"addrspace.c","children":[]},{"name":"copyinout.c","children":[]},{"name":"kmalloc.c","children":[]}]}]};
+
+ // Calculate total nodes, max label length
+ var maxLabelLength = 0;
+ // panning variables
+ var panSpeed = 200;
+ // Misc. variables
+ var i = 0;
+ var duration = 750;
+ var root;
+
+ // size of the diagram
+ var viewerWidth = $(document).width();
+ var viewerHeight = $(document).height();
+
+ var tree = d3.layout.tree()
+              .size([viewerHeight, viewerWidth]);
+
+ // define a d3 diagonal projection for use by the node paths later on.
+ var diagonal = d3.svg.diagonal()
+                  .projection(function(d) {
+                    return [d.y, d.x];
+                  });
+
+ // A recursive helper function for performing some setup by walking through all nodes
+ function visit(parent, visitFn, childrenFn) {
+   if (!parent) return;
+
+   visitFn(parent);
+
+   var children = childrenFn(parent);
+   if (children) {
+     var count = children.length;
+     for (var i = 0; i < count; i++) {
+       visit(children[i], visitFn, childrenFn);
+     }
+   }
+ }
+
+ // Call visit function to establish maxLabelLength
+ visit(treeData, function(d) {
+   maxLabelLength = Math.max(d.name.length, maxLabelLength);
+
+ }, function(d) {
+   return d.children && d.children.length > 0 ? d.children : null;
+ });
+
+ function pan(domNode, direction) {
+   var speed = panSpeed;
+   if (panTimer) {
+     clearTimeout(panTimer);
+     translateCoords = d3.transform(svgGroup.attr("transform"));
+     if (direction == 'left' || direction == 'right') {
+       translateX = direction == 'left' ? translateCoords.translate[0] + speed : translateCoords.translate[0] - speed;
+       translateY = translateCoords.translate[1];
+     } else if (direction == 'up' || direction == 'down') {
+       translateX = translateCoords.translate[0];
+       translateY = direction == 'up' ? translateCoords.translate[1] + speed : translateCoords.translate[1] - speed;
+     }
+     scaleX = translateCoords.scale[0];
+     scaleY = translateCoords.scale[1];
+     scale = zoomListener.scale();
+     svgGroup.transition().attr("transform", "translate(" + translateX + "," + translateY + ")scale(" + scale + ")");
+     d3.select(domNode).select('g.node').attr("transform", "translate(" + translateX + "," + translateY + ")");
+     zoomListener.scale(zoomListener.scale());
+     zoomListener.translate([translateX, translateY]);
+     panTimer = setTimeout(function() {
+       pan(domNode, speed, direction);
+     }, 50);
+   }
+ }
+
+ // Define the zoom function for the zoomable tree
+ function zoom() {
+   svgGroup.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+ }
+
+
+ // define the zoomListener which calls the zoom function on the "zoom" event constrained within the scaleExtents
+ var zoomListener = d3.behavior.zoom().scaleExtent([0.1, 3]).on("zoom", zoom);
+
+ // define the baseSvg, attaching a class for styling and the zoomListener
+ var baseSvg = d3.select("#tree-container").append("svg")
+                 .attr("width", viewerWidth)
+                 .attr("height", viewerHeight)
+                 .attr("class", "overlay")
+                 .call(zoomListener);
+
+ // Function to center node when clicked/dropped so node doesn't get lost when collapsing/moving with large amount of children.
+
+ function centerNode(source) {
+   scale = zoomListener.scale();
+   x = -source.y0;
+   y = -source.x0;
+   x = x * scale + viewerWidth / 2;
+   y = y * scale + viewerHeight / 2;
+   d3.select('g').transition()
+     .duration(duration)
+     .attr("transform", "translate(" + x + "," + y + ")scale(" + scale + ")");
+   zoomListener.scale(scale);
+   zoomListener.translate([x, y]);
+ }
+
+ // Toggle children function
+
+ function toggleChildren(d) {
+   if (d.children) {
+     d._children = d.children;
+     d.children = null;
+   } else if (d._children) {
+     d.children = d._children;
+     d._children = null;
+   }
+   return d;
+ }
+
+ // Toggle children on click.
+ function click(d) {
+   if (d3.event.defaultPrevented) return; // click suppressed
+   d = toggleChildren(d);
+   update(d);
+   centerNode(d);
+ }
+
+ function update(source) {
+   // Compute the new height, function counts total children of root node and sets tree height accordingly.
+   // This prevents the layout looking squashed when new nodes are made visible or looking sparse when nodes are removed
+   // This makes the layout more consistent.
+   var levelWidth = [1];
+   var childCount = function(level, n) {
+
+     if (n.children && n.children.length > 0) {
+       if (levelWidth.length <= level + 1) levelWidth.push(0);
+
+       levelWidth[level + 1] += n.children.length;
+       n.children.forEach(function(d) {
+         childCount(level + 1, d);
+       });
+     }
+   };
+   childCount(0, root);
+   var newHeight = d3.max(levelWidth) * 25; // 25 pixels per line
+   tree = tree.size([newHeight, viewerWidth]);
+
+   // Compute the new tree layout.
+   var nodes = tree.nodes(root).reverse(),
+       links = tree.links(nodes);
+
+   // Set widths between levels based on maxLabelLength.
+   nodes.forEach(function(d) {
+     d.y = (d.depth * (maxLabelLength * 10)); //maxLabelLength * 10px
+     // alternatively to keep a fixed scale one can set a fixed depth per level
+     // Normalize for fixed-depth by commenting out below line
+     // d.y = (d.depth * 500); //500px per level.
+   });
+
+   // Update the nodes…
+   node = svgGroup.selectAll("g.node")
+                  .data(nodes, function(d) {
+                    return d.id || (d.id = ++i);
+                  });
+
+   // Enter any new nodes at the parent's previous position.
+   var nodeEnter = node.enter().append("g")
+                       .attr("class", "node")
+                       .attr("transform", function(d) {
+                         return "translate(" + source.y0 + "," + source.x0 + ")";
+                       })
+                       .on('click', click);
+
+   nodeEnter.append("circle")
+            .attr('class', 'nodeCircle')
+            .attr("r", 0)
+            .style("fill", function(d) {
+              return d._children ? "lightsteelblue" : "#fff";
+            });
+
+   nodeEnter.append("text")
+            .attr("x", function(d) {
+              return d.children || d._children ? -10 : 10;
+            })
+            .attr("dy", ".35em")
+            .attr('class', 'nodeText')
+            .attr("text-anchor", function(d) {
+              return d.children || d._children ? "end" : "start";
+            })
+            .text(function(d) {
+              return d.name;
+            })
+            .style("fill-opacity", 0);
+
+   // Update the text to reflect whether node has children or not.
+   node.select('text')
+       .attr("x", function(d) {
+         return d.children || d._children ? -10 : 10;
+       })
+       .attr("text-anchor", function(d) {
+         return d.children || d._children ? "end" : "start";
+       })
+       .text(function(d) {
+         return d.name;
+       });
+
+   // Change the circle fill depending on whether it has children and is collapsed
+   node.select("circle.nodeCircle")
+       .attr("r", 4.5)
+       .style("fill", function(d) {
+         return d._children ? "lightsteelblue" : "#fff";
+       });
+
+   // Transition nodes to their new position.
+   var nodeUpdate = node.transition()
+                        .duration(duration)
+                        .attr("transform", function(d) {
+                          return "translate(" + d.y + "," + d.x + ")";
+                        });
+
+   // Fade the text in
+   nodeUpdate.select("text")
+             .style("fill-opacity", 1);
+
+   // Transition exiting nodes to the parent's new position.
+   var nodeExit = node.exit().transition()
+                      .duration(duration)
+                      .attr("transform", function(d) {
+                        return "translate(" + source.y + "," + source.x + ")";
+                      })
+                      .remove();
+
+   nodeExit.select("circle")
+           .attr("r", 0);
+
+   nodeExit.select("text")
+           .style("fill-opacity", 0);
+
+   // Update the links…
+   var link = svgGroup.selectAll("path.link")
+                      .data(links, function(d) {
+                        return d.target.id;
+                      });
+
+   // Enter any new links at the parent's previous position.
+   link.enter().insert("path", "g")
+       .attr("class", "link")
+       .attr("d", function(d) {
+         var o = {
+           x: source.x0,
+           y: source.y0
+         };
+         return diagonal({
+           source: o,
+           target: o
+         });
+       });
+
+   // Transition links to their new position.
+   link.transition()
+       .duration(duration)
+       .attr("d", diagonal);
+
+   // Transition exiting nodes to the parent's new position.
+   link.exit().transition()
+       .duration(duration)
+       .attr("d", function(d) {
+         var o = {
+           x: source.x,
+           y: source.y
+         };
+         return diagonal({
+           source: o,
+           target: o
+         });
+       })
+       .remove();
+
+   // Stash the old positions for transition.
+   nodes.forEach(function(d) {
+     d.x0 = d.x;
+     d.y0 = d.y;
+   });
+ }
+
+ // Append a group which holds all nodes and which the zoom Listener can act upon.
+ var svgGroup = baseSvg.append("g");
+
+ // Define the root
+ root = treeData;
+ root.x0 = viewerHeight / 2;
+ root.y0 = 0;
+
+ // Layout the tree initially and center on the root node.
+ update(root);
+ centerNode(root);
+</script>
+</body>
+</html>
