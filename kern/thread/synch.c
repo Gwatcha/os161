@@ -139,7 +139,6 @@ V(struct semaphore *sem)
 // Lock.
 
 
-
 /*
  * lock_create::
  *   creates a new lock with the specified name and returns it.
@@ -203,6 +202,7 @@ lock_destroy(struct lock *lock)
 	/* wchan_cleanup will assert if anyone's waiting on it */
 	spinlock_cleanup(&lock->lk_spinlock);
 	wchan_destroy(lock->lk_wchan);
+
         kfree(lock->lk_name);
         kfree(lock);
 }
@@ -329,7 +329,6 @@ cv_destroy(struct cv *cv)
         KASSERT(cv != NULL);
 
 	wchan_destroy(cv->cv_wchan); // Will assert if thread is waiting on cv.
-
         kfree(cv->cv_name);
         kfree(cv);
 }

@@ -107,8 +107,6 @@ syscall(struct trapframe *tf)
 	    case SYS___time:
 		err = sys___time((userptr_t)tf->tf_a0,
 				 (userptr_t)tf->tf_a1);
-
-            //case SYS__exit %&% goes here probs!
 		break;
 
 	    /* Add stuff here */
