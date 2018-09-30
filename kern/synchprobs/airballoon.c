@@ -1,6 +1,3 @@
-/*
- * Driver code for airballoon problem
- */
 #include <types.h>
 #include <lib.h>
 #include <thread.h>
@@ -14,14 +11,23 @@
  *     number of rows correspond to NROPES, Col 0 is for stakes, Col. 1 is for
  *     hooks, the mapping represents a rope.
  * 
- *     To remove a rope, acquire the lock, search for the row associated with
- *     a particular stake or rope, write -1 in both columns, decrement ropes_left,
- *     and release the lock.
+ *     To remove a rope, acquire the lock, search for the row associated with a
+ *     particular stake or rope, write -1 in the rope column [1], decrement
+ *     ropes_left, and release the lock.
  * 
  *     To attach a rope to a different stake, acquire the lock, find the row
  *     indices of the two stakes and switch the entries in Col 0, and release the
- *     lock.
+ *     lock. LordFlowerKiller selects stakes randomly.
+ * 
+ *     Each thread knows it's finished when the number of ropes is 0. On exiting,
+ *     a thread adds one to the 'done' variable in map. Once this variable is
+ *     equal to 4, the main function knows that each thread is finished and can
+ *     free the map.
+ * 
+ *     It is invariant that a thread acquires the lock on map before makign any
+ *     changes, and when done, releases the lock.
  */
+
 struct map {
     struct lock *lock;
     volatile int ropes_left;
@@ -32,13 +38,6 @@ struct map {
 };
 
 
-
-/*
- * Describe your design and any invariants or locking protocols 
- * that must be maintained. Explain the exit conditions. How
- * do all threads know when they are done?  
- */
-
 static
 void
 dandelion(void *p, unsigned long n)
@@ -48,6 +47,7 @@ dandelion(void *p, unsigned long n)
 
     kprintf("Dandelion thread starting\n");
 
+    /* Loop until ropes_left == 0 */
     while (1) {
         lock_acquire(map->lock);
 
@@ -61,7 +61,6 @@ dandelion(void *p, unsigned long n)
                 /* Dandelion severes a rope */
                 kprintf("Dandelion severed rope %d\n", map->ropes[i][1]);
                 map->ropes[i][1] = -1;
-                map->ropes[i][0] = -1;
                 map->ropes_left--;
                 break;
             }
@@ -93,6 +92,7 @@ marigold(void *p, unsigned long n)
     struct map *map =  p;
     (void) n;
 
+    /* Loop until ropes_left == 0 */
     while (1) {
         lock_acquire(map->lock);
 
@@ -100,13 +100,12 @@ marigold(void *p, unsigned long n)
         if (map->ropes_left == 0)
             break;
 
-        /* Find the next available stake and unhook the rope. */
+        /* Find the next stake with a rope attached to it and sever the rope. */
         for (int i = 0; i < NROPES; i++) {
-            if (map->ropes[i][0] != -1) {
+            if (map->ropes[i][1] != -1) {
                 /* Marigold severes a rope */
                 kprintf("Marigold severed rope %d from stake %d\n", map->ropes[i][1], map->ropes[i][0]);
                 map->ropes[i][1] = -1;
-                map->ropes[i][0] = -1;
                 map->ropes_left--;
                 break;
             }
@@ -137,24 +136,24 @@ flowerkiller(void *p, unsigned long n)
 
     kprintf("Lord FlowerKiller thread starting\n");
 
+    /* Loop until ropes_left == 0 */
     while (1) {
         lock_acquire(map->lock);
 
         /* Termination case  */
-        if (map->ropes_left < 2)
+        if (map->ropes_left == 0)
             break;
 
-        /* Randomly find two available stakes. */
+        /* Randomly find two available stakes, stake one must have a rope attached to it. */
         int i1 = random() % NROPES;
-        while (map->ropes[i1][0] == -1)
+        while (map->ropes[i1][1] == -1)
             i1 = random() % NROPES;
 
         int i2 = random() % NROPES;
-        while (map->ropes[i2][0] == -1 || i2 == i1)
+        while (i2 == i1)
             i2 = random() % NROPES;
 
         /* Switch them around */
-
         kprintf("Lord FlowerKiller switched rope %d from stake %d to stake %d\n", map->ropes[i1][1], map->ropes[i1][0], map->ropes[i2][0]);
         int rope_1 = map->ropes[i1][1];
         map->ropes[i1][1] = map->ropes[i2][1];
@@ -198,7 +197,6 @@ retry:
 }
 
 
-// Change this function as necessary
 int
 airballoon(int nargs, char **args)
 {
