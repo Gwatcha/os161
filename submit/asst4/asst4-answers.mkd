@@ -1,49 +1,50 @@
 ## Assignment 4 - Code reading exercises 
-
 1. What are the ELF magic numbers?
 > The ELF magic numbers are in the first few bytes of a file and indicate that the file type is ELF.
 
 2. What is the difference between `UIO_USERISPACE` and `UIO_USERSPACE?` When should one use `UIO_SYSSPACE` instead?
->
+> These macros are all a part of the `enum uio_seg` defined in /kern/include/uio.h.  They are used in the `struct uio` (same file), this struct contains a pointer to block(s) of data (called an iovec) as well as information about that block(s). The enum is used to indicate wheter the block points to user process code (in that case, it uses `UIO_USERISPACE`), a pointer to user process data (`UIO_USERSPACE`), or a pointer to an area in the kernel (`UIO,SYSSPACE`). I would use each one in it's respective case.
 
 3. Why can the struct uio that is used to read in a segment be allocated on the stack in `load_segment()` (i.e., where does the memory read actually go)?
-> 
-
+> The memory read goes into a range of addresses in memory represented by the `uio.uio_iovec` struct, which simply holds a pointer to the start of the address where the data will exist as well as the length of the data. Filling in this range of addresses Is taken care of in `VOP_READ(v, &u)`. This function eventually calls 
+`dev_read(struct vnode *v, struct uio *uio)` in /kern/vfs/device.c and this function calls `DEV_IO` which branches to a function that handles device specific IO operation according to the device the file (vnode) exists on. 
 
 4. In `runprogram(),` why is it important to call `vfs_close()` before going to usermode?
+> Because we previously open it in the function. If we never did `vfs_close()` then the vnode would have a dangling refcount that is never set to 0, since the kernel probably dosen't check up on itself to make sure it closes all its files. If the ref count to a vnode is always >0, then it will never be destroyed.
 
 5. What function forces the processor to switch into usermode? Is this function machine dependent?
->
+> *** 
 
 6. In what file are copyin and copyout defined? memmove? Why can't copyin and copyout be implemented as simply as memmove?
->
+> copyin, copyout : /kern/include/copyinout.h, memmove : /kern/include/lib.h... Because copyin and copyout are intended for use by the kernel and have more requirements.
 
  
 7. What (briefly) is the purpose of `userptr_t?`
->
+> To differentiate between user pointers and kernel pointers for maximum type safety.
 
 8. What is the numerical value of the exception code for a MIPS system call?
->
+> `EX_SYS 8`, in kern/arch/mips/include/trapframe.h
 
 9. How many bytes is an instruction in MIPS? (Answer this by reading `syscall()` carefully, not by looking somewhere else.)
+> It is 4 bytes, this can be seen in the instruction `tf->tf_epc += 4` which advances the PC by one. 
 
 10. Why do you "probably want to change" the implementation of `kill_curthread()?`
->
+> Because currently, when user level code hits a fatal fault and `kill_curthread` is called, the kernel just panics.
 
 11. What would be required to implement a system call that took more than 4 arguments?
-> 
+> The system call would need to read the user trapframe and get the additional arguments off the users stack through the trapframes sp. 
 
 12. What is the purpose of the `SYSCALL` macro?
->
+> To condense a bunch of assembly (in userland/lib/libc/arch/mips/syscalls-mips.S) into a call of one macro, thus making the interface easy to use. The assembly assures that the number for the system call specified is in reg v0 before calling syscall.
 
 13. What is the MIPS instruction that actually triggers a system call? (Answer this by reading the source in this directory, not looking somewhere else.)
->
+> `syscall` (line 84 syscalls-mips.S))
 
 14. After reading syscalls-mips.S and syscall.c, you should be prepared to answer the following question: OS/161 supports 64-bit values; `lseek()` takes and returns a 64-bit offset value. Thus, `lseek()` takes a 32-bit file handle (arg0), a 64-bit offset (arg1), a 32-bit whence (arg2), and needs to return a 64-bit offset value. In void `syscall(struct trapframe *tf)` where will you find each of the three arguments (in which registers) and how will you return the 64-bit offset?
->
+>  
 
 15. As you were reading the code in runprogram.c and loadelf.c, you probably noticed how the kernel manipulates the files. Which kernel function is called to open a file? Which macro is called to read the file? What about to write a file? Which data structure is used in the kernel to represent an open file? 
 >
 
 16. What is the purpose of `VOP_INCREF` and `VOP_DECREF`?
->
+> To increase and decrease the reference count of a vnode. `VOP_DECREF` also calls someone to destroy it in the case the ref count now equals 0.
