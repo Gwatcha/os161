@@ -109,7 +109,30 @@ syscall(struct trapframe *tf)
 				 (userptr_t)tf->tf_a1);
 		break;
 
-	    /* Add stuff here */
+            case SYS_open:
+                break;
+
+            case SYS_read:
+                break;
+
+            case SYS_write:
+                break;
+
+            case SYS_lseek:
+                break;
+
+            case SYS_close:
+                break;
+
+            case SYS_dup2:
+                break;
+
+            case SYS_chdir:
+                err = sys_chdir((char*)tf->tf_a0);
+                break;
+
+            case SYS___getcwd:
+                break;
 
 	    default:
 		kprintf("Unknown syscall %d\n", callno);
