@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+cd kern/compile/SYNCHPROBS &&
+bmake depend &&
+bmake &&
+bmake install &&
+
+cd ../../../../root &&
+sys161 kernel &&
+
+cd ../src
+

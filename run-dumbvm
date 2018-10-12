@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+cd kern/compile/DUMBVM &&
+bmake depend &&
+bmake &&
+bmake install &&
+
+cd ../../../../root &&
+sys161 kernel &&
+
+cd ../src
+
