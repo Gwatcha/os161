@@ -1,6 +1,9 @@
 #include <types.h>
 #include <syscall.h>
 
+#include <limits.h>
+#include <vfs.h>
+
 // See manpages at http://ece.ubc.ca/~os161/man/syscall/ for a description of these calls
 
 int sys_open(const char *filename, int flags)
@@ -49,8 +52,9 @@ int sys_dup2(int oldfd, int newfd)
 
 int sys_chdir(const char* pathname)
 {
-        (void)pathname;
-        return -1;
+        char buffer[PATH_MAX];
+        snprintf(buffer, PATH_MAX, pathname);
+        return vfs_chdir(buffer);
 }
 
 int sys___getcwd(char* buf, size_t buflen)
