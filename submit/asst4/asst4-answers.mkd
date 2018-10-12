@@ -13,7 +13,7 @@
 > Because we previously open it in the function. If we never did `vfs_close()` then the vnode would have a dangling refcount that is never set to 0, since the kernel probably dosen't check up on itself to make sure it closes all its files. If the ref count to a vnode is always >0, then it will never be destroyed.
 
 5. What function forces the processor to switch into usermode? Is this function machine dependent?
-> *** 
+> `mips_usermode` in kern/mips/locore/trap.c is the function for entering usermode. It is machine dependent.
 
 6. In what file are copyin and copyout defined? memmove? Why can't copyin and copyout be implemented as simply as memmove?
 > copyin, copyout : /kern/include/copyinout.h, memmove : /kern/include/lib.h... Because copyin and copyout are intended for use by the kernel and have more requirements.
@@ -41,10 +41,10 @@
 > `syscall` (line 84 syscalls-mips.S))
 
 14. After reading syscalls-mips.S and syscall.c, you should be prepared to answer the following question: OS/161 supports 64-bit values; `lseek()` takes and returns a 64-bit offset value. Thus, `lseek()` takes a 32-bit file handle (arg0), a 64-bit offset (arg1), a 32-bit whence (arg2), and needs to return a 64-bit offset value. In void `syscall(struct trapframe *tf)` where will you find each of the three arguments (in which registers) and how will you return the 64-bit offset?
->  
+> Since mips is 32-bit, 64bit values need two registers. For the return value, I would store half of it in reg v0 and half in reg v1 before leaving a syscall (they say this is the MIPS API in syscalls-mips.S ~line70 ). The inputs may be found as follows: the file handle in `tf->tf_a0`, the offset in `tf->tf_a1` and `tf->tf_a2`, and the whence value go in `tf->tf_a3`.
 
 15. As you were reading the code in runprogram.c and loadelf.c, you probably noticed how the kernel manipulates the files. Which kernel function is called to open a file? Which macro is called to read the file? What about to write a file? Which data structure is used in the kernel to represent an open file? 
->
+> To open a file, `vfs_open` is called (in kern/vfs/vfspath.c), this function will return a vnode struct which represents an open file. Reading and writing are done through a vnode struct and a uio struct and a call to a `VPO_READ(vn, uio)` or `VPO_WRITE(vn, uio)` macro, these macros eventually call filesystem specific code which interfaces with devices and populates or writes to the uio.
 
 16. What is the purpose of `VOP_INCREF` and `VOP_DECREF`?
-> To increase and decrease the reference count of a vnode. `VOP_DECREF` also calls someone to destroy it in the case the ref count now equals 0.
+> To increase and decrease the reference count of a vnode, the reference count is how many people are 'looking at the vnode (have the file open). `VOP_DECREF` also calls someone to destroy it in the case the ref count equals 0 after a `VOP_DECREF`
