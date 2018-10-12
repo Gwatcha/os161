@@ -122,6 +122,7 @@ syscall(struct trapframe *tf)
                 break;
 
             case SYS_lseek:
+                /* Must fix: off_t is 64 bit, which pushes us into the stack */
                 err = sys_lseek((int)tf->tf_a0, (off_t)tf->tf_a1, (int)tf->tf_a2);
                 break;
 
