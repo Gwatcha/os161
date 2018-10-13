@@ -36,11 +36,20 @@
  * Note: curproc is defined by <current.h>.
  */
 
+#include <limits.h>
 #include <spinlock.h>
 #include <thread.h> /* required for struct threadarray */
 
 struct addrspace;
 struct vnode;
+
+
+struct file_table_entry {
+        struct vnode* vnode;
+        int mode_flages;
+        off_t offset;
+        // Other members
+};
 
 /*
  * Process structure.
@@ -57,6 +66,7 @@ struct proc {
 	struct vnode *p_cwd;		/* current working directory */
 
 	/* add more material here as needed */
+        struct file_table_entry* file_table[__OPEN_MAX];
 };
 
 /* This is the process structure for the kernel and for kernel-only threads. */

@@ -1,6 +1,8 @@
 #include <types.h>
 #include <syscall.h>
 
+#include <uio.h>
+
 #include <limits.h>
 #include <vfs.h>
 
@@ -52,6 +54,7 @@ int sys_dup2(int oldfd, int newfd)
 
 int sys_chdir(const char* pathname)
 {
+        // May need to use copyin/copyout
         char buffer[PATH_MAX];
         snprintf(buffer, PATH_MAX, pathname);
         return vfs_chdir(buffer);
@@ -59,8 +62,11 @@ int sys_chdir(const char* pathname)
 
 int sys___getcwd(char* buf, size_t buflen)
 {
-        (void)buf;
-        (void)buflen;
-        return -1;
+        // May need to use copyin/copyout
+        struct iovec iov;
+        struct uio myuio;
+
+        uio_kinit(&iov, &myuio, buf, buflen, 0, UIO_READ);
+        return vfs_getcwd(&myuio);
 }
 
