@@ -14,9 +14,31 @@
 
 int sys_open(const char *filename, int flags)
 {
-        (void)filename;
-        (void)flags;
-        return -1;
+        struct proc* proc = curproc;
+        /* struct file_table_entry* (*file_table)[__OPEN_MAX] = proc->file_table; */
+        struct file_table_entry** file_table = proc->file_table;
+
+        const int first_non_reserved_fd = 3; // skip stdin, stdout, stderr
+
+        // fd, as in file_descriptor
+        int fd = first_non_reserved_fd;
+
+        for (; ; ++fd) {
+                if (fd >= __OPEN_MAX) {
+                        return EMFILE;
+                }
+                if (file_table[fd] == NULL) {
+                        break;
+                }
+        }
+
+        // TODO: ensure that this is correctly initialized
+        struct vnode** file_vnode = &(file_table[fd]->vnode);
+
+        char buffer[PATH_MAX];
+        snprintf(buffer, PATH_MAX, filename);
+
+        return vfs_open(buffer, flags, 0, file_vnode);
 }
 
 ssize_t sys_read(int fd, void* buf, size_t buflen)
