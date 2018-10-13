@@ -14,9 +14,7 @@
 
 int sys_open(const char *filename, int flags)
 {
-        struct proc* proc = curproc;
-        /* struct file_table_entry* (*file_table)[__OPEN_MAX] = proc->file_table; */
-        struct file_table_entry** file_table = proc->file_table;
+        struct file_table_entry** file_table = curproc->p_file_table;
 
         const int first_non_reserved_fd = 3; // skip stdin, stdout, stderr
 

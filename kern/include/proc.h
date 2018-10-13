@@ -66,7 +66,7 @@ struct proc {
 	struct vnode *p_cwd;		/* current working directory */
 
 	/* add more material here as needed */
-        struct file_table_entry* file_table[__OPEN_MAX];
+        struct file_table_entry* p_file_table[__OPEN_MAX];
 };
 
 /* This is the process structure for the kernel and for kernel-only threads. */
