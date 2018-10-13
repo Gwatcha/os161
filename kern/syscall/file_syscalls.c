@@ -30,13 +30,16 @@ int sys_open(const char *filename, int flags)
                 }
         }
 
-        // TODO: ensure that this is correctly initialized
+        file_table[fd] = file_table_entry_create();
+
         struct vnode** file_vnode = &(file_table[fd]->vnode);
 
         char buffer[PATH_MAX];
         snprintf(buffer, PATH_MAX, filename);
 
-        return vfs_open(buffer, flags, 0, file_vnode);
+        vfs_open(buffer, flags, 0, file_vnode);
+
+        return fd;
 }
 
 ssize_t sys_read(int fd, void* buf, size_t buflen)

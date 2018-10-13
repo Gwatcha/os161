@@ -54,6 +54,22 @@
  */
 struct proc *kproc;
 
+struct file_table_entry* file_table_entry_create(void) {
+
+        struct file_table_entry* fte = kmalloc(sizeof(struct file_table_entry));
+
+        fte->vnode = NULL;
+        fte->mode_flags = 0;
+        fte->offset = 0;
+
+        return fte;
+}
+
+void
+file_table_entry_destroy(struct file_table_entry* fte) {
+        (void)fte;
+}
+
 /*
  * Create a proc structure.
  */
@@ -84,7 +100,7 @@ proc_create(const char *name)
 
 	/* Initialize the file table */
         for (int fd = 0; fd < __OPEN_MAX; ++fd) {
-                proc->p_file_table = NULL;
+                proc->p_file_table[fd] = NULL;
         }
 
 	return proc;

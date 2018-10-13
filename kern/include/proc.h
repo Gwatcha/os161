@@ -51,6 +51,10 @@ struct file_table_entry {
         // Other members
 };
 
+struct file_table_entry* file_table_entry_create(void);
+
+void file_table_entry_destroy(struct file_table_entry* fte);
+
 /*
  * Process structure.
  */
