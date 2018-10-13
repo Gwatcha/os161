@@ -3,8 +3,12 @@
 
 #include <uio.h>
 
+#include <proc.h>
+#include <current.h>
+
 #include <limits.h>
 #include <vfs.h>
+#include <kern/errno.h>
 
 // See manpages at http://ece.ubc.ca/~os161/man/syscall/ for a description of these calls
 
