@@ -68,8 +68,18 @@ off_t sys_lseek(int fd, off_t pos, int whence)
 
 int sys_close(int fd)
 {
-        (void)fd;
-        return -1;
+        if (fd < 0 || __OPEN_MAX < fd) {
+                return EBADF;
+        }
+        struct file_table_entry* file_table_entry = curproc->p_file_table[fd];
+        if (file_table_entry == NULL) {
+                return EBADF;
+        }
+
+        // TODO: File reference counting
+
+        vfs_close(file_table_entry->vnode);
+        return 0;
 }
 
 int sys_dup2(int oldfd, int newfd)
