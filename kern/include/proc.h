@@ -43,12 +43,11 @@
 struct addrspace;
 struct vnode;
 
-
 struct file_table_entry {
         struct vnode* vnode;
         int mode_flags;
         off_t offset;
-        // Other members
+	int refcount;
 };
 
 struct file_table_entry* file_table_entry_create(void);
@@ -69,7 +68,7 @@ struct proc {
 	/* VFS */
 	struct vnode *p_cwd;		/* current working directory */
 
-	/* add more material here as needed */
+	/* an array of file_table_entries representing this processes open files */
         struct file_table_entry* p_file_table[__OPEN_MAX];
 };
 

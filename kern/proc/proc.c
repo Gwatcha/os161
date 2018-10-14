@@ -54,6 +54,10 @@
  */
 struct proc *kproc;
 
+/*
+ * Create and return an entry in a proccesses file table with a NULL vnode, and
+ * 0 for mode_flags, offset, and refcount.
+ */
 struct file_table_entry* file_table_entry_create(void) {
 
         struct file_table_entry* fte = kmalloc(sizeof(struct file_table_entry));
@@ -61,13 +65,25 @@ struct file_table_entry* file_table_entry_create(void) {
         fte->vnode = NULL;
         fte->mode_flags = 0;
         fte->offset = 0;
+	fte->refcount = 0;
 
         return fte;
 }
 
+/*
+ * Destroy a file_table_entry, freeing any memory associated with it. It is an
+ * invariant that refcount is equal to zero before destroying the entry. The vnode
+ * is not affected.
+ */
 void
 file_table_entry_destroy(struct file_table_entry* fte) {
-        (void)fte;
+	KASSERT(fte->refcount == 0);
+        fte->vnode = NULL;
+        fte->mode_flags = 0;
+        fte->offset = 0;
+	
+
+	kfree(fte);
 }
 
 /*
