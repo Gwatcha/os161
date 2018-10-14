@@ -72,8 +72,8 @@ int sys_open(const char *filename, int flags)
 
 	/* Create the fd's vnode through vfs_open. */
 	struct vnode** file_vnode = &(file_table[fd]->vnode);  
-        result = vfs_open(kbuffer, flags, 0, file_vnode);  /* What if it is open already? */
-	if (result) { /* may return many errors  */
+        result = vfs_open(kbuffer, flags, 0, file_vnode);  
+	if (result) { /* assumption: handles rest of errors  */
 		file_table_entry_destroy(file_table[fd]);
 		return result;
 	}
@@ -81,7 +81,6 @@ int sys_open(const char *filename, int flags)
         file_table[fd]->vnode = *file_vnode;
 
         return fd;
-
 }
 
 
