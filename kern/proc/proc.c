@@ -103,6 +103,13 @@ proc_create(const char *name)
                 proc->p_file_table[fd] = NULL;
         }
 
+        /* TODO Open stdin, stdout, and stderr  */
+        /*
+        proc->p_file_table[0] = ?
+        proc->p_file_table[1] = ?
+        proc->p_file_table[2] = ?
+        */
+
 	return proc;
 }
 
