@@ -190,7 +190,7 @@ ssize_t sys_write(int fd, const void *buf, size_t nbytes)
         struct vnode * file = file_table[fd]->vnode;
         
         /* copy the user data in */
-        char kbuf[nbytes];
+        char kbuf[nbytes]; /* TODO: safe? */
         int result = copyin(buf, kbuf, nbytes);
         if (result != 0)
             return EFAULT;
@@ -361,7 +361,7 @@ int sys___getcwd(char* buf, size_t buflen)
         struct uio u;
 
 	/* buflen check */
-	if (buflen < 0 || buflen >= PATH_MAX)
+	if (buflen >= PATH_MAX)
 		return EFAULT;
 
 	/* Initialize a uio buffer */
