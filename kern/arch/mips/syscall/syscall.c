@@ -35,6 +35,7 @@
 #include <thread.h>
 #include <current.h>
 #include <syscall.h>
+#include <copyinout.h>
 
 
 /*
@@ -110,10 +111,8 @@ syscall(struct trapframe *tf)
 		break;
 
             case SYS_open:
-            {
                 err = sys_open(&retval, (char*)tf->tf_a0, (int)tf->tf_a1);
                 break;
-            }
             case SYS_read:
                 err = sys_read(&retval, (int)tf->tf_a0, (void*)tf->tf_a1, (size_t)tf->tf_a2);
                 break;
@@ -123,11 +122,19 @@ syscall(struct trapframe *tf)
                 break;
 
             case SYS_lseek:
-                /* Must fix: off_t is 64 bit, which pushes arguments into the stack */
-                /* Must fix: off_t is 64 bit, which requires changes for  */
-                /* err = sys_lseek(&retval, (int)tf->tf_a0, (off_t)tf->tf_a1, (int)tf->tf_a2); */
+		{
+		/* kwhence is one the user stack, so we must copy it in */
+		int kwhence;
+		copyin((userptr_t) (&tf->tf_sp + 16), &kwhence, 32); /* TODO: Might be the wrong offset? */
+
+		/* now we join 2 32bit registers, a2 & a3, which represent the 64bit value offset */
+		/* it is assumed that the first half is stored in a2, and the second half in a3. */
+		off_t kpos = ((off_t) tf->tf_a2 << 32) + ((off_t) tf->tf_a3);
+
+                err = sys_lseek(&retval, (int)tf->tf_a0, kpos, kwhence);
                 break;
 
+		}
             case SYS_close:
                 err = sys_close((int)tf->tf_a0);
                 break;
