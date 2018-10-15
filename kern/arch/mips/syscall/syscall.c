@@ -117,16 +117,16 @@ syscall(struct trapframe *tf)
                 break;
             }
             case SYS_read:
-                err = sys_read((int)tf->tf_a0, (void*)tf->tf_a1, (size_t)tf->tf_a2);
+                err = sys_read(&retval, (int)tf->tf_a0, (void*)tf->tf_a1, (size_t)tf->tf_a2);
                 break;
 
             case SYS_write:
-                err = sys_write((int)tf->tf_a0, (void*)tf->tf_a1, (size_t)tf->tf_a2);
+                err = sys_write(&retval, (int)tf->tf_a0, (void*)tf->tf_a1, (size_t)tf->tf_a2);
                 break;
 
             case SYS_lseek:
                 /* Must fix: off_t is 64 bit, which pushes us into the stack */
-                err = sys_lseek((int)tf->tf_a0, (off_t)tf->tf_a1, (int)tf->tf_a2);
+                err = sys_lseek(&retval, (int)tf->tf_a0, (off_t)tf->tf_a1, (int)tf->tf_a2);
                 break;
 
             case SYS_close:
@@ -134,15 +134,15 @@ syscall(struct trapframe *tf)
                 break;
 
             case SYS_dup2:
-                err = sys_dup2((int)tf->tf_a0, (int)tf->tf_a1);
+                err = sys_dup2(&retval, (int)tf->tf_a0, (int)tf->tf_a1);
                 break;
 
             case SYS_chdir:
-                err = sys_chdir((char*)tf->tf_a0);
+                err = sys_chdir(&retval, (char*)tf->tf_a0);
                 break;
 
             case SYS___getcwd:
-                err = sys___getcwd((char*)tf->tf_a0, (size_t)tf->tf_a0);
+                err = sys___getcwd(&retval, (char*)tf->tf_a0, (size_t)tf->tf_a0);
                 break;
 
 	    default:
