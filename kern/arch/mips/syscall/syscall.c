@@ -123,8 +123,9 @@ syscall(struct trapframe *tf)
                 break;
 
             case SYS_lseek:
-                /* Must fix: off_t is 64 bit, which pushes us into the stack */
-                err = sys_lseek(&retval, (int)tf->tf_a0, (off_t)tf->tf_a1, (int)tf->tf_a2);
+                /* Must fix: off_t is 64 bit, which pushes arguments into the stack */
+                /* Must fix: off_t is 64 bit, which requires changes for  */
+                /* err = sys_lseek(&retval, (int)tf->tf_a0, (off_t)tf->tf_a1, (int)tf->tf_a2); */
                 break;
 
             case SYS_close:
@@ -136,7 +137,7 @@ syscall(struct trapframe *tf)
                 break;
 
             case SYS_chdir:
-                err = sys_chdir(&retval, (char*)tf->tf_a0);
+                err = sys_chdir((char*)tf->tf_a0);
                 break;
 
             case SYS___getcwd:

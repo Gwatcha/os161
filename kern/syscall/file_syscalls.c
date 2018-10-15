@@ -23,7 +23,7 @@
 
 /* On success, open returns a nonnegative file handle. On error, -1 is returned,
    and errno is set according to the error encountered. */
-int sys_open(int* out, const char *filename, int flags)
+int sys_open(int* retval, const char *filename, int flags)
 {
 
 	/*
@@ -42,6 +42,9 @@ int sys_open(int* out, const char *filename, int flags)
 	 * EIO	A hard I/O error occurred.
 	 * EFAULT	filename was an invalid pointer.
 	 */
+
+        /* return invalid file descriptor by default */
+        *retval = -1;
 
         struct file_table_entry** file_table = curproc->p_file_table;
 
@@ -85,7 +88,7 @@ int sys_open(int* out, const char *filename, int flags)
 
         file_table[fd]->vnode = *file_vnode;
 
-        *out = fd;
+        *retval = fd;
 	return 0;
 }
 
@@ -103,7 +106,7 @@ int sys_open(int* out, const char *filename, int flags)
  *     Postconditions: the offset for the fd is advanced by the number of bytes
  *                     read and buf contains the data
  */
-int sys_read(ssize_t * out, int fd, void* buf, size_t buflen)
+int sys_read(ssize_t * retval, int fd, void* buf, size_t buflen)
 {
 	/*
 	 * Possible Errors
@@ -150,7 +153,7 @@ int sys_read(ssize_t * out, int fd, void* buf, size_t buflen)
         file_table[fd]->offset += (buflen - u.uio_resid);
 
         /* return number of bytes read */
-        *out = (buflen - u.uio_resid);
+        *retval = (buflen - u.uio_resid);
 	return 0;
 }
 
@@ -167,7 +170,7 @@ int sys_read(ssize_t * out, int fd, void* buf, size_t buflen)
  *     Postconditions: the offset for the fd is advanced by the number of bytes
  *                     read and buf contains the data
  */
-int sys_write(ssize_t *out, int fd, const void *buf, size_t nbytes)
+int sys_write(ssize_t *retval, int fd, const void *buf, size_t nbytes)
 {
 
         /*
@@ -217,11 +220,11 @@ int sys_write(ssize_t *out, int fd, const void *buf, size_t nbytes)
         file_table[fd]->offset += (nbytes - u.uio_resid);
 
         /* return number of bytes written */
-        *out = (nbytes - u.uio_resid);
+        *retval = (nbytes - u.uio_resid);
 	return 0;
 }
 
-int sys_lseek(off_t *out, int fd, off_t pos, int whence)
+int sys_lseek(off_t *retval, int fd, off_t pos, int whence)
 {
         /*
          *  Possible Errors
@@ -275,7 +278,7 @@ int sys_lseek(off_t *out, int fd, off_t pos, int whence)
             default : return EINVAL;
         }
 
-        *out = file_table[fd]->offset;
+        *retval = file_table[fd]->offset;
 	return 0;
 }
 
@@ -310,7 +313,7 @@ int sys_close(int fd)
         return 0;
 }
 
-int sys_dup2(int *out, int oldfd, int newfd)
+int sys_dup2(int *retval, int oldfd, int newfd)
 {
 
 	/*
@@ -323,12 +326,13 @@ int sys_dup2(int *out, int oldfd, int newfd)
 	 *         possible, or a global limit on open files was reached.
 	 */
 
+        (void)retval;
         (void)oldfd;
         (void)newfd;
         return -1;
 }
 
-int sys_chdir(int *out, const char* pathname)
+int sys_chdir(const char* pathname)
 {
 
 	/*
@@ -356,7 +360,7 @@ int sys_chdir(int *out, const char* pathname)
 	return 0;
 }
 
-int sys___getcwd(int *out, char* buf, size_t buflen)
+int sys___getcwd(int *retval, char* buf, size_t buflen)
 {
 	/*
 	 * Possible Errors
@@ -387,7 +391,7 @@ int sys___getcwd(int *out, char* buf, size_t buflen)
 		return error;
 
 	/* return length of data returned  */
-        *out = (int) got;
+        *retval = (int) got;
 	return 0;
 }
 
