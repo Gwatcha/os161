@@ -80,7 +80,7 @@ syscall(struct trapframe *tf)
 {
 	int callno;
 	int32_t retval;
-	int err;
+	int err = 0;
 
 	KASSERT(curthread != NULL);
 	KASSERT(curthread->t_curspl == 0);
@@ -110,12 +110,9 @@ syscall(struct trapframe *tf)
 		break;
 
             case SYS_open:
-            {
-                sys_open_result result = sys_open((char*)tf->tf_a0, (int)tf->tf_a1);
-                err = result.error_code;
-                retval = result.file_descriptor;
+                retval = sys_open((char*)tf->tf_a0, (int)tf->tf_a1, &err);
                 break;
-            }
+
             case SYS_read:
                 err = sys_read(&retval, (int)tf->tf_a0, (void*)tf->tf_a1, (size_t)tf->tf_a2);
                 break;

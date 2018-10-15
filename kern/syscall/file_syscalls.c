@@ -21,23 +21,9 @@
 // All syscalls return 0 on success, error code otherwise
 // Other return values are stored in the *out parameter.
 
-static sys_open_result sys_open_error(int error_code) {
-        sys_open_result result;
-        result.file_descriptor = -1;
-        result.error_code = error_code;
-        return result;
-}
-
-static sys_open_result sys_open_success(int file_descriptor) {
-        sys_open_result result;
-        result.file_descriptor = file_descriptor;
-        result.error_code = 0;
-        return result;
-}
-
 /* On success, open returns a nonnegative file handle. On error, -1 is returned,
    and errno is set according to the error encountered. */
-sys_open_result sys_open(const char *filename, int flags)
+int sys_open(const char *filename, int flags, int* error)
 {
 
 	/*
@@ -71,16 +57,17 @@ sys_open_result sys_open(const char *filename, int flags)
 	/* safely copy in the user specified path */
         char kbuffer[PATH_MAX];
 	size_t * got = NULL;
-	int error = copyinstr((const_userptr_t) filename, kbuffer, PATH_MAX, got);
-	if (error) { /* may return ENAMETOOLONG or EFAULt */
-		return sys_open_error(error);
+	*error = copyinstr((const_userptr_t) filename, kbuffer, PATH_MAX, got);
+	if (*error) { /* may return ENAMETOOLONG or EFAULt */
+		return -1;
 	}
 
 	/* acquire next open file descriptor */
         int fd = 3; /* skip std fd's */
         for (; ; ++fd) {
                 if (fd >= __OPEN_MAX) {
-                        return sys_open_error(EMFILE);
+                        *error = EMFILE;
+                        return -1;
                 }
                 if (file_table[fd] == NULL) {
                         break;
@@ -93,16 +80,16 @@ sys_open_result sys_open(const char *filename, int flags)
 	file_table[fd]->refcount = 1;
 
 	/* Create the fd's vnode through vfs_open. */
-	struct vnode** file_vnode = &(file_table[fd]->vnode);  
-        error = vfs_open(kbuffer, flags, 0, file_vnode);  
-	if (error) { /* assumption: handles rest of errors  */
+	struct vnode** file_vnode = &(file_table[fd]->vnode);
+        *error = vfs_open(kbuffer, flags, 0, file_vnode);
+	if (*error) { /* assumption: handles rest of errors  */
 		file_table_entry_destroy(file_table[fd]);
-		return sys_open_error(error);
+		return -1;
 	}
 
         file_table[fd]->vnode = *file_vnode;
 
-        return sys_open_success(fd);
+        return fd;
 }
 
 
