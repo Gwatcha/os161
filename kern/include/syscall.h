@@ -64,7 +64,11 @@ int sys___time(userptr_t user_seconds, userptr_t user_nanoseconds);
  * File related system calls (see file_syscalls.c)
  */
 
-int sys_open(const char* filename, int flags);
+typedef struct {
+    int file_descriptor;
+    int error_code;
+} sys_open_result;
+sys_open_result sys_open(const char* filename, int flags);
 
 // The os161 man pages include a second signature for open.
 // C does not support overloading, so I'm not sure if/how this is supposed to work

@@ -19,7 +19,23 @@
 
 // See manpages at http://ece.ubc.ca/~os161/man/syscall/ for a description of these calls
 
-int sys_open(const char *filename, int flags)
+static sys_open_result sys_open_error(int error_code) {
+        sys_open_result result;
+        result.file_descriptor = -1;
+        result.error_code = error_code;
+        return result;
+}
+
+static sys_open_result sys_open_success(int file_descriptor) {
+        sys_open_result result;
+        result.file_descriptor = file_descriptor;
+        result.error_code = 0;
+        return result;
+}
+
+/* On success, open returns a nonnegative file handle. On error, -1 is returned,
+   and errno is set according to the error encountered. */
+sys_open_result sys_open(const char *filename, int flags)
 {
 
 	/*
@@ -41,24 +57,28 @@ int sys_open(const char *filename, int flags)
 
         struct file_table_entry** file_table = curproc->p_file_table;
 
+        /* if (flags & O_RDONLY == 0 && flags & O_WRONLY == 0 && flags & O_RDWR == 0) { */
+                /* return EINVAL; */
+        /* } */
+
         /* Assert flags are valid flags (are defined in fcntl.h) */
-        if (flags != O_RDONLY && flags != O_WRONLY && flags != O_RDWR &&
-            flags != O_CREAT && flags != O_EXCL && flags != O_TRUNC && flags != O_APPEND)
-            return EINVAL;
+        /* if (flags != O_RDONLY && flags != O_WRONLY && flags != O_RDWR && */
+        /*     flags != O_CREAT && flags != O_EXCL && flags != O_TRUNC && flags != O_APPEND) */
+        /*     return EINVAL; */
 
 	/* safely copy in the user specified path */
         char kbuffer[PATH_MAX];
 	size_t * got = NULL;
-	int result = copyinstr((const_userptr_t) filename, kbuffer, PATH_MAX, got);
-	if (result) { /* may return ENAMETOOLONG or EFAULt */
-		return result;
+	int error = copyinstr((const_userptr_t) filename, kbuffer, PATH_MAX, got);
+	if (error) { /* may return ENAMETOOLONG or EFAULt */
+		return sys_open_error(error);
 	}
 
 	/* acquire next open file descriptor */
         int fd = 3; /* skip std fd's */
         for (; ; ++fd) {
                 if (fd >= __OPEN_MAX) {
-                        return EMFILE;
+                        return sys_open_error(EMFILE);
                 }
                 if (file_table[fd] == NULL) {
                         break;
@@ -72,15 +92,15 @@ int sys_open(const char *filename, int flags)
 
 	/* Create the fd's vnode through vfs_open. */
 	struct vnode** file_vnode = &(file_table[fd]->vnode);  
-        result = vfs_open(kbuffer, flags, 0, file_vnode);  
-	if (result) { /* assumption: handles rest of errors  */
+        error = vfs_open(kbuffer, flags, 0, file_vnode);  
+	if (error) { /* assumption: handles rest of errors  */
 		file_table_entry_destroy(file_table[fd]);
-		return result;
+		return sys_open_error(error);
 	}
 
         file_table[fd]->vnode = *file_vnode;
 
-        return fd;
+        return sys_open_success(fd);
 }
 
 
