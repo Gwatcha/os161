@@ -23,7 +23,7 @@
 
 /* On success, open returns a nonnegative file handle. On error, -1 is returned,
    and errno is set according to the error encountered. */
-int sys_open(const char *filename, int flags, int* error)
+int sys_open(int* out, const char *filename, int flags)
 {
 
 	/*
@@ -45,29 +45,25 @@ int sys_open(const char *filename, int flags, int* error)
 
         struct file_table_entry** file_table = curproc->p_file_table;
 
-        /* if (flags & O_RDONLY == 0 && flags & O_WRONLY == 0 && flags & O_RDWR == 0) { */
-                /* return EINVAL; */
-        /* } */
-
-        /* Assert flags are valid flags (are defined in fcntl.h) */
-        /* if (flags != O_RDONLY && flags != O_WRONLY && flags != O_RDWR && */
-        /*     flags != O_CREAT && flags != O_EXCL && flags != O_TRUNC && flags != O_APPEND) */
-        /*     return EINVAL; */
+	/* Assert flags are valid flags (are defined in fcntl.h) */
+	if (flags != O_RDONLY && flags != O_WRONLY && flags != O_RDWR &&
+	    flags != O_CREAT && flags != O_EXCL && flags != O_TRUNC && flags != O_APPEND)
+	    return EINVAL;
 
 	/* safely copy in the user specified path */
         char kbuffer[PATH_MAX];
 	size_t * got = NULL;
-	*error = copyinstr((const_userptr_t) filename, kbuffer, PATH_MAX, got);
-	if (*error) { /* may return ENAMETOOLONG or EFAULt */
-		return -1;
+	int error;
+	error = copyinstr((const_userptr_t) filename, kbuffer, PATH_MAX, got);
+	if (error) { /* may return ENAMETOOLONG or EFAULT */
+		return error;
 	}
 
 	/* acquire next open file descriptor */
         int fd = 3; /* skip std fd's */
         for (; ; ++fd) {
                 if (fd >= __OPEN_MAX) {
-                        *error = EMFILE;
-                        return -1;
+                        return  EMFILE;
                 }
                 if (file_table[fd] == NULL) {
                         break;
@@ -81,15 +77,16 @@ int sys_open(const char *filename, int flags, int* error)
 
 	/* Create the fd's vnode through vfs_open. */
 	struct vnode** file_vnode = &(file_table[fd]->vnode);
-        *error = vfs_open(kbuffer, flags, 0, file_vnode);
-	if (*error) { /* assumption: handles rest of errors  */
+        error = vfs_open(kbuffer, flags, 0, file_vnode);
+	if (error) { /* assumption: handles rest of errors  */
 		file_table_entry_destroy(file_table[fd]);
-		return -1;
+		return error;
 	}
 
         file_table[fd]->vnode = *file_vnode;
 
-        return fd;
+        *out = fd;
+	return 0;
 }
 
 
@@ -140,14 +137,14 @@ int sys_read(ssize_t * out, int fd, void* buf, size_t buflen)
         uio_kinit(&iov, &u, kbuf, buflen, offset, UIO_READ);
 
         /* read from the file */
-        int result = VOP_READ(file, &u);
-        if (result)  /* handles EIO */
-    		return result;
+        int error = VOP_READ(file, &u);
+        if (error)  /* handles EIO */
+    		return error;
 
         /* safely copy the data into the user buffer */
-        result = copyout(kbuf, buf, buflen); 
-        if (result) /* handles EFAULT */
-		return result;
+        error = copyout(kbuf, buf, buflen); 
+        if (error) /* handles EFAULT */
+		return error;
 
         /* advance seek position */
         file_table[fd]->offset += (buflen - u.uio_resid);
@@ -200,8 +197,8 @@ int sys_write(ssize_t *out, int fd, const void *buf, size_t nbytes)
         
         /* copy the user data in */
         char kbuf[nbytes]; /* TODO: safe? */
-        int result = copyin(buf, kbuf, nbytes);
-        if (result != 0)
+        int error = copyin(buf, kbuf, nbytes);
+        if (error != 0)
             return EFAULT;
 
         /* Initialize a uio suitable for I/O from a kernel buffer. */
@@ -210,10 +207,10 @@ int sys_write(ssize_t *out, int fd, const void *buf, size_t nbytes)
         uio_kinit(&iov, &u, kbuf, nbytes, offset, UIO_WRITE);
 
         /* write to the file */
-        result = VOP_WRITE(file, &u);
-        if (result == ENOSPC) 
+        error = VOP_WRITE(file, &u);
+        if (error == ENOSPC) 
             return ENOSPC;
-        if (result == EIO)
+        if (error == EIO)
             return EIO;
 
         /* advance seek position */
@@ -249,7 +246,7 @@ int sys_lseek(off_t *out, int fd, off_t pos, int whence)
         
         /* a stat buf is needed in case we need a files size */
         struct stat statbuf;
-        int result;
+        int error;
         off_t new_cursor;
 
         /* Users have 3 different ways of setting the cursor */
@@ -266,9 +263,9 @@ int sys_lseek(off_t *out, int fd, off_t pos, int whence)
                             file_table[fd]->offset = new_cursor;
                             break; /* new position is cur pos + pos */ 
 
-            case SEEK_END:  result = VOP_STAT(file_table[fd]->vnode, &statbuf);
-                            if ( result )
-                                return result; /* error getting vnode info*/
+            case SEEK_END:  error = VOP_STAT(file_table[fd]->vnode, &statbuf);
+                            if ( error )
+                                return error; /* error getting vnode info*/
 
                             new_cursor = statbuf.st_size - 1 + pos;
                             if (new_cursor < 0)
@@ -347,14 +344,14 @@ int sys_chdir(int *out, const char* pathname)
 	/* safely copy in the pathname into a kernel buffer */
 	char kbuffer[PATH_MAX];
 	size_t * got = NULL;
-	int result = copyinstr((const_userptr_t) pathname, kbuffer, PATH_MAX, got);
-	if (result) /* handles EFAULT */
-		return result;
+	int error = copyinstr((const_userptr_t) pathname, kbuffer, PATH_MAX, got);
+	if (error) /* handles EFAULT */
+		return error;
 
 	/* change directory */
-	result = vfs_chdir(kbuffer);
-	if (result) /* assumption: handles all other errors */
-		return result;
+	error = vfs_chdir(kbuffer);
+	if (error) /* assumption: handles all other errors */
+		return error;
 
 	return 0;
 }
@@ -379,15 +376,15 @@ int sys___getcwd(int *out, char* buf, size_t buflen)
 	char kbuf[buflen];
         uio_kinit(&iov, &u, kbuf, buflen, 0, UIO_READ);
 
-	int result = vfs_getcwd(&u);
-	if (result) /*  handles EIO & ENOENT*/
-		return result;
+	int error = vfs_getcwd(&u);
+	if (error) /*  handles EIO & ENOENT*/
+		return error;
 
 	/* safely copy out the cwd */
 	size_t * got = NULL;
-	result = copyoutstr(kbuf, (userptr_t) buf, buflen, got);
-	if (result) /* handles EFAULT */
-		return result;
+	error = copyoutstr(kbuf, (userptr_t) buf, buflen, got);
+	if (error) /* handles EFAULT */
+		return error;
 
 	/* return length of data returned  */
         *out = (int) got;
