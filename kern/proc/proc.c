@@ -48,6 +48,9 @@
 #include <current.h>
 #include <addrspace.h>
 #include <vnode.h>
+#include <vfs.h>
+#include <kern/unistd.h>
+#include <kern/fcntl.h>
 
 /*
  * The process for the kernel; this holds all the kernel-only threads.
@@ -86,6 +89,35 @@ file_table_entry_destroy(struct file_table_entry* fte) {
 	kfree(fte);
 }
 
+/* file_table_entry* */
+static
+int
+open_console(struct proc* p, int fd, int flags) {
+
+        struct file_table_entry** file_table = p->p_file_table;
+
+	/* Create a file table entry at fd with 1 refcount and specified flags */
+        file_table[fd] = file_table_entry_create();
+	file_table[fd]->mode_flags = flags;
+	file_table[fd]->refcount = 1;
+
+	/* Create the fd's vnode through vfs_open. */
+	struct vnode** file_vnode = &(file_table[fd]->vnode);
+
+        char buffer[16];
+        strcpy(buffer, "con:");
+
+        int result = vfs_open(buffer, flags, 0, file_vnode);
+	if (result) { /* assumption: handles rest of errors  */
+		file_table_entry_destroy(file_table[fd]);
+		return result;
+	}
+
+        file_table[fd]->vnode = *file_vnode;
+
+        return 0;
+}
+
 /*
  * Create a proc structure.
  */
@@ -120,11 +152,16 @@ proc_create(const char *name)
         }
 
         /* TODO Open stdin, stdout, and stderr  */
+        /* open_console(proc, STDIN_FILENO, O_RDONLY); */
+        /* open_console(proc, STDOUT_FILENO, O_WRONLY); */
+        /* open_console(proc, STDERR_FILENO, O_WRONLY); */
         /*
         proc->p_file_table[0] = ?
         proc->p_file_table[1] = ?
         proc->p_file_table[2] = ?
         */
+
+        
 
 	return proc;
 }
@@ -261,6 +298,10 @@ proc_create_runprogram(const char *name)
 		newproc->p_cwd = curproc->p_cwd;
 	}
 	spinlock_release(&curproc->p_lock);
+
+        open_console(newproc, STDIN_FILENO, O_RDONLY);
+        open_console(newproc, STDOUT_FILENO, O_WRONLY);
+        open_console(newproc, STDERR_FILENO, O_WRONLY);
 
 	return newproc;
 }
