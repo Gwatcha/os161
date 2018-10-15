@@ -301,16 +301,19 @@ int sys_close(int fd)
                 return EBADF;
         }
 
-	/* if reference count is > 1, simply decrement it */
-	if (file_table[fd]->refcount > 1) {
-		file_table[fd]->refcount -= 1;
-		return 0;
-	}
+        struct file_table_entry* fte = file_table[fd];
+        file_table[fd] = NULL;
+
+        /* decrement the reference count */
+        fte->refcount -= 1;
+        if (fte->refcount > 0) {
+                /* if the file table entry is still in use, do not destroy it */
+                return 0;
+        }
 
 	/* else, we may safely remove this file table entry & 'close' the vnode*/
-        vfs_close(file_table[fd]->vnode);
-	file_table[fd]->refcount -= 1;
-	file_table_entry_destroy(file_table[fd]);
+        vfs_close(fte->vnode);
+	file_table_entry_destroy(fte);
 
         return 0;
 }
