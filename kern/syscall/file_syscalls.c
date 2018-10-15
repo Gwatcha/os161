@@ -23,6 +23,8 @@
  * Other return values are stored in the *out parameter.
  */
 
+/* On success, open returns a nonnegative file handle. On error, -1 is returned,
+   and errno is set according to the error encountered. */
 int sys_open(int* retval, const char *filename, int flags)
 {
 
@@ -42,6 +44,9 @@ int sys_open(int* retval, const char *filename, int flags)
 	 * EIO	A hard I/O error occurred.
 	 * EFAULT	filename was an invalid pointer.
 	 */
+
+        /* return invalid file descriptor by default */
+        *retval = -1;
 
         struct file_table_entry** file_table = curproc->p_file_table;
 
@@ -323,12 +328,13 @@ int sys_dup2(int *retval, int oldfd, int newfd)
 	 *         possible, or a global limit on open files was reached.
 	 */
 
+        (void)retval;
         (void)oldfd;
         (void)newfd;
         return -1;
 }
 
-int sys_chdir(int *retval, const char* pathname)
+int sys_chdir(const char* pathname)
 {
 
 	/*
