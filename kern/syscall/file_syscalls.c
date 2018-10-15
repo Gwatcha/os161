@@ -17,9 +17,11 @@
 #include <kern/fcntl.h>
 #include <kern/seek.h>
 
-// See manpages at http://ece.ubc.ca/~os161/man/syscall/ for a description of these calls
-// All syscalls return 0 on success, error code otherwise
-// Other return values are stored in the *out parameter.
+/*
+ * See manpages at http://ece.ubc.ca/~os161/man/syscall/ for a description of these calls
+ * All syscalls return 0 on success, error code otherwise.
+ * Other return values are stored in the *out parameter.
+ */
 
 /* On success, open returns a nonnegative file handle. On error, -1 is returned,
    and errno is set according to the error encountered. */
