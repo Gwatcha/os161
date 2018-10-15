@@ -131,7 +131,14 @@ syscall(struct trapframe *tf)
 		/* it is assumed that the first half is stored in a2, and the second half in a3. */
 		off_t kpos = ((off_t) tf->tf_a2 << 32) + ((off_t) tf->tf_a3);
 
-                err = sys_lseek(&retval, (int)tf->tf_a0, kpos, kwhence);
+		/* our return value is 64 bits as well, so we need to store it in v0 and v1 */
+		/* the wrap up code handles v0 for us, we need to store v1. */
+		off_t retval_ext;
+                err = sys_lseek(&retval_ext, (int)tf->tf_a0, kpos, kwhence);
+
+		retval = (int32_t) ((retval_ext) >> 32);
+		tf->tf_v1 = (int32_t) (retval_ext & 0x00000000ffffffff);
+
                 break;
 
 		}
