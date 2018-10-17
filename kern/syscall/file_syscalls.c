@@ -398,38 +398,49 @@ int sys_chdir(const char* pathname)
 	return 0;
 }
 
+
+/* The name of the current directory is computed and stored in buf, an area of size buflen.
+ * The length of data actually stored, which must be non-negative, is returned.
+ *
+ *       Note: this call behaves like read - the name stored in buf is not 0-terminated.
+ *
+ *       This function is not meant to be called except by the C library;
+ *       application programmers should use getcwd instead.
+ *
+ *       __getcwd (like all system calls) should be atomic. In practice, because of complications
+ *       associated with locking both up and down trees, it often isn't quite. Note that the kernel
+ *       is not obliged to (and generally cannot) make the __getcwd call atomic with respect to
+ *       other threads in the same process accessing the transfer buffer during the operation.
+ */
 int sys___getcwd(int *retval, char* buf, size_t buflen)
 {
 	/*
 	 * Possible Errors
-	 *    +    ENOENT	A component of the pathname no longer exists.
-	 *    +    EIO	A hard I/O error occurred.
-	 *    +    EFAULT	buf points to an invalid address.
+	 *    +    ENOENT       A component of the pathname no longer exists.
+	 *    +    EIO          A hard I/O error occurred.
+	 *    +    EFAULT       buf points to an invalid address.
 	 */
 
         struct iovec iov;
-        struct uio u;
+        struct uio ku;
+
         if (buf == NULL) {
                 return EFAULT;
         }
 
-
 	/* Initialize a uio buffer */
-	char kbuf[buflen];
-        uio_kinit(&iov, &u, kbuf, buflen, 0, UIO_READ);
+        uio_kinit(&iov, &ku, buf, buflen, 0, UIO_READ);
 
-	int error = vfs_getcwd(&u);
-	if (error) /*  handles EIO & ENOENT*/
+	int error = vfs_getcwd(&ku);
+	if (error) {
+                /*  handles EIO & ENOENT*/
 		return error;
+        }
 
-	/* safely copy out the cwd */
-	size_t * got = NULL;
-	error = copyoutstr(kbuf, (userptr_t) buf, buflen, got);
-	if (error) /* handles EFAULT */
-		return error;
+        const size_t bytes_read = buflen - ku.uio_resid;
 
 	/* return length of data returned  */
-        *retval = (int) got;
+        *retval = bytes_read;
 	return 0;
 }
 
