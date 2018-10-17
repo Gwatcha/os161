@@ -51,9 +51,9 @@ int sys_open(int* retval, const char *filename, int flags)
         struct file_table_entry** file_table = curproc->p_file_table;
 
 	/* Assert flags are valid flags (are defined in fcntl.h) */
-	if (flags != O_RDONLY && flags != O_WRONLY && flags != O_RDWR &&
-	    flags != O_CREAT && flags != O_EXCL && flags != O_TRUNC && flags != O_APPEND)
-	    return EINVAL;
+	/* if (flags != O_RDONLY && flags != O_WRONLY && flags != O_RDWR && */
+	/*     flags != O_CREAT && flags != O_EXCL && flags != O_TRUNC && flags != O_APPEND) */
+	/*     return EINVAL; */
 
 	/* safely copy in the user specified path */
         char kbuffer[PATH_MAX];
@@ -188,13 +188,16 @@ int sys_write(ssize_t *retval, int fd, const void *buf, size_t nbytes)
         struct file_table_entry** file_table = curproc->p_file_table;
 
         /* bad fd checks */
-        if (fd < 0 || fd >= __OPEN_MAX)
-            return EBADF;
+        if (fd < 0 || fd >= __OPEN_MAX) {
+                return EBADF;
+        }
 
-        if (file_table[fd] == NULL ||
-           (file_table[fd]->mode_flags != O_WRONLY && 
-            file_table[fd]->mode_flags != O_RDWR && file_table[fd]->mode_flags != O_APPEND )) 
-            return EBADF;
+        if (file_table[fd] == NULL) {
+                return EBADF;
+        }
+           /* (file_table[fd]->mode_flags != O_WRONLY &&  */
+            /* file_table[fd]->mode_flags != O_RDWR && file_table[fd]->mode_flags != O_APPEND ))  */
+            /* return EBADF; */
 
         /* acquire file info */
         off_t offset = file_table[fd]->offset;
