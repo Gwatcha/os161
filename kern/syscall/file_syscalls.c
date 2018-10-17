@@ -198,9 +198,10 @@ int sys_write(ssize_t *retval, int fd, const void *buf, size_t nbytes)
         if (file_table[fd] == NULL) {
                 return EBADF;
         }
-           /* (file_table[fd]->mode_flags != O_WRONLY &&  */
-            /* file_table[fd]->mode_flags != O_RDWR && file_table[fd]->mode_flags != O_APPEND ))  */
-            /* return EBADF; */
+        /* TODO: Validate flags */
+        /* (file_table[fd]->mode_flags != O_WRONLY &&  */
+        /* file_table[fd]->mode_flags != O_RDWR && file_table[fd]->mode_flags != O_APPEND ))  */
+        /* return EBADF; */
 
         /* acquire file info */
         off_t offset = file_table[fd]->offset;
