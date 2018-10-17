@@ -409,10 +409,10 @@ int sys___getcwd(int *retval, char* buf, size_t buflen)
 
         struct iovec iov;
         struct uio u;
+        if (buf == NULL) {
+                return EFAULT;
+        }
 
-	/* buflen check */
-	if (buflen >= PATH_MAX)
-		return EFAULT;
 
 	/* Initialize a uio buffer */
 	char kbuf[buflen];
