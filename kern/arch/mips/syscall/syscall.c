@@ -129,7 +129,7 @@ syscall(struct trapframe *tf)
 
 		/* now we join 2 32bit registers, a2 & a3, which represent the 64bit value offset */
 		/* it is assumed that the first half is stored in a2, and the second half in a3. */
-		off_t kpos = ((off_t) tf->tf_a2 << 32) + ((off_t) tf->tf_a3);
+		off_t kpos = ((off_t) tf->tf_a2 << 32) | ((off_t) tf->tf_a3);
 
 		/* our return value is 64 bits as well, so we need to store it in v0 and v1 */
 		/* the wrap up code handles v0 for us, we need to store v1. */
