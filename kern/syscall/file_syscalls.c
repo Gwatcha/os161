@@ -325,23 +325,49 @@ int sys_close(int fd)
         return 0;
 }
 
+
+/* dup2 clones the file handle oldfd onto the file handle newfd.
+   If newfd names an already-open file, that file is closed */
 int sys_dup2(int *retval, int oldfd, int newfd)
 {
+       /*
+        * Possible Errors:
+        *
+        * EBADF:  oldfd is not a valid file handle, or newfd is a value that cannot be a valid file
+        *         handle.
+        *
+        * EMFILE: The process's file table was full, or a process-specific limit on open files was
+        *         reached.
+        *
+        * ENFILE: The system's file table was full, if such a thing is possible,
+        *         or a global limit on open files was reached.
+        */
 
-	/*
-	 * TODO: Possible Errors:
-	 *         EBADF	oldfd is not a valid file handle, or newfd is a value
-	 *         that cannot be a valid file handle.
-	 *         EMFILE	The process's file table was full, or a
-	 *         process-specific limit on open files was reached.
-	 *         ENFILE	The system's file table was full, if such a thing is
-	 *         possible, or a global limit on open files was reached.
-	 */
+        if (oldfd < 0 || oldfd >= __OPEN_MAX) {
+                return EBADF;
+        }
+        if (newfd < 0 || newfd >= __OPEN_MAX) {
+                return EBADF;
+        }
 
-        (void)retval;
-        (void)oldfd;
-        (void)newfd;
-        return -1;
+        struct file_table_entry** file_table = curproc->p_file_table;
+        if (file_table[oldfd] == NULL) {
+                return EBADF;
+        }
+
+        if (file_table[newfd] != NULL) {
+                int error = sys_close(newfd);
+                if (error) {
+                        return error;
+                }
+        }
+
+        file_table[newfd] = file_table[oldfd];
+
+        file_table[oldfd]->refcount += 1;
+
+        *retval = newfd;
+        return 0;
 }
 
 int sys_chdir(const char* pathname)
