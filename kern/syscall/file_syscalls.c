@@ -99,8 +99,8 @@ int sys_open(int* retval, const char *filename, int flags)
  * sys_read:
  *     given a fd, reads up to buflen bytes from the file specified by fd, at
  *     the location in the file specified by the current seek position of the
- *     file, and stores them in the space pointed to by buf. 
- * 
+ *     file, and stores them in the space pointed to by buf.
+ *
  *     Preconditions: fd entry must exist in table and be openned for reading,
  *                     otherwise returns EBADF. If a vnode exists, it must be a valid vnode, else
  *                     kernel panics. if part or all of address space pointed to by buf is
@@ -116,7 +116,7 @@ int sys_read(ssize_t * retval, int fd, void* buf, size_t buflen)
 	 *    +    EFAULT	Part or all of the address space pointed to by buf is invalid.
 	 *    +    EIO		A hardware I/O error occurred reading the data.
 	 */
-	
+
         /* Obtain user process' open file table */
         struct file_table_entry** file_table = curproc->p_file_table;
 
@@ -150,7 +150,7 @@ int sys_read(ssize_t * retval, int fd, void* buf, size_t buflen)
     		return error;
 
         /* safely copy the data into the user buffer */
-        error = copyout(kbuf, buf, buflen); 
+        error = copyout(kbuf, buf, buflen);
         if (error) /* handles EFAULT */
 		return error;
 
@@ -166,8 +166,8 @@ int sys_read(ssize_t * retval, int fd, void* buf, size_t buflen)
  * sys_write:
  *     given a fd, writes up to nbytes bytes to the file specified by fd, at
  *     the location in the file specified by the current seek position of the
- *     file. Returns number of bytes written.  
- * 
+ *     file. Returns number of bytes written.
+ *
  *     Preconditions: fd entry must exist in table and be openned for writing,
  *                     otherwise returns EBADF. If a vnode exists, it must be a valid vnode, else
  *                     kernel panics. if part or all of address space pointed to by buf is
@@ -205,7 +205,7 @@ int sys_write(ssize_t *retval, int fd, const void *buf, size_t nbytes)
         /* acquire file info */
         off_t offset = file_table[fd]->offset;
         struct vnode * file = file_table[fd]->vnode;
-        
+
         /* copy the user data in */
         char kbuf[nbytes]; /* TODO: safe? */
         int error = copyin(buf, kbuf, nbytes);
@@ -219,7 +219,7 @@ int sys_write(ssize_t *retval, int fd, const void *buf, size_t nbytes)
 
         /* write to the file */
         error = VOP_WRITE(file, &u);
-        if (error == ENOSPC) 
+        if (error == ENOSPC)
             return ENOSPC;
         if (error == EIO)
             return EIO;
@@ -236,25 +236,25 @@ int sys_lseek(off_t *retval, int fd, off_t pos, int whence)
 {
         /*
          *  Possible Errors
-         *  +  EBADF	fd is not a valid file handle. 
+         *  +  EBADF	fd is not a valid file handle.
          *  +  ESPIPE	fd refers to an object which does not support seeking. **
-         *  +  EINVAL	whence is invalid. 
-         *  +  EINVAL	The resulting seek position would be negative. 
+         *  +  EINVAL	whence is invalid.
+         *  +  EINVAL	The resulting seek position would be negative.
          */
 
         struct file_table_entry** file_table = curproc->p_file_table;
 
         /* bad fd checks */
-        if (fd < 0 || __OPEN_MAX <= fd) 
+        if (fd < 0 || __OPEN_MAX <= fd)
             return EBADF;
 
-        if (file_table[fd] == NULL) 
+        if (file_table[fd] == NULL)
             return EBADF;
 
 	/* is seekable check */
 	if (!VOP_ISSEEKABLE(file_table[fd]->vnode))
 		return ESPIPE;
-        
+
         /* a stat buf is needed in case we need a files size */
         struct stat statbuf;
         int error;
@@ -266,13 +266,13 @@ int sys_lseek(off_t *retval, int fd, off_t pos, int whence)
                             if (new_cursor < 0)
                                 return EINVAL; /* negative cursor check */
                             file_table[fd]->offset = pos;
-                            break; /* new position is pos */  
+                            break; /* new position is pos */
 
-            case SEEK_CUR:  new_cursor = file_table[fd]->offset + pos; 
+            case SEEK_CUR:  new_cursor = file_table[fd]->offset + pos;
                             if (new_cursor < 0)
                                 return EINVAL; /* negative cursor check */
                             file_table[fd]->offset = new_cursor;
-                            break; /* new position is cur pos + pos */ 
+                            break; /* new position is cur pos + pos */
 
             case SEEK_END:  error = VOP_STAT(file_table[fd]->vnode, &statbuf);
                             if ( error )
@@ -282,7 +282,7 @@ int sys_lseek(off_t *retval, int fd, off_t pos, int whence)
                             if (new_cursor < 0)
                                 return EINVAL; /* negative cursor check */
                             file_table[fd]->offset = new_cursor;
-                            break; /* new position is pos EOF + pos */ 
+                            break; /* new position is pos EOF + pos */
             default : return EINVAL;
         }
 
