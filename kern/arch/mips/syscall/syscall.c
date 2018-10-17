@@ -122,8 +122,8 @@ syscall(struct trapframe *tf)
                 break;
 
             case SYS_lseek:
-		{
-		/* kwhence is one the user stack, so we must copy it in */
+            {
+		/* kwhence is on the user stack, so we must copy it in */
 		int kwhence;
 		copyin((userptr_t) (tf->tf_sp + 16), &kwhence, 4); /* TODO: Might be the wrong offset? */
 
@@ -140,8 +140,7 @@ syscall(struct trapframe *tf)
 		tf->tf_v1 = (int32_t) (retval_ext & 0x00000000ffffffff);
 
                 break;
-
-		}
+            }
             case SYS_close:
                 err = sys_close((int)tf->tf_a0);
                 break;
