@@ -124,9 +124,11 @@ int sys_read(ssize_t * retval, int fd, void* buf, size_t buflen)
         if (fd < 0 || fd >= __OPEN_MAX)
     		return EBADF;
 
-        if (file_table[fd] == NULL ||
-	(file_table[fd]->mode_flags != O_RDONLY && file_table[fd]->mode_flags != O_RDWR )) 
+        if (file_table[fd] == NULL) {
 		return EBADF;
+        }
+        /* TODO: Validate flags */
+	/* (file_table[fd]->mode_flags != O_RDONLY && file_table[fd]->mode_flags != O_RDWR ))  */
 
         if (buflen <= 0) /* TODO: What is the max buflen? */
     		return EFAULT;
