@@ -125,7 +125,7 @@ syscall(struct trapframe *tf)
 		{
 		/* kwhence is one the user stack, so we must copy it in */
 		int kwhence;
-		copyin((userptr_t) (&tf->tf_sp + 16), &kwhence, 32); /* TODO: Might be the wrong offset? */
+		copyin((userptr_t) (tf->tf_sp + 16), &kwhence, 4); /* TODO: Might be the wrong offset? */
 
 		/* now we join 2 32bit registers, a2 & a3, which represent the 64bit value offset */
 		/* it is assumed that the first half is stored in a2, and the second half in a3. */
