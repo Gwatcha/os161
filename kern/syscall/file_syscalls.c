@@ -84,11 +84,7 @@ int sys_open(int* retval, const char *filename, int flags)
 	}
 
 	/* Create a file table entry at fd with 1 refcount and specified flags */
-        file_table[fd] = file_table_entry_create();
-	file_table[fd]->open_flags = flags;
-	file_table[fd]->refcount = 1;
-
-        file_table[fd]->vnode = file_vnode;
+        file_table[fd] = file_table_entry_create(flags, file_vnode);
 
         *retval = fd;
 	return 0;

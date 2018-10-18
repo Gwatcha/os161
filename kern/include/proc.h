@@ -45,12 +45,12 @@ struct vnode;
 
 struct file_table_entry {
         struct vnode* vnode;
-        int open_flags;
         off_t offset;
+        int open_flags;
 	int refcount;
 };
 
-struct file_table_entry* file_table_entry_create(void);
+struct file_table_entry* file_table_entry_create(int open_flags, struct vnode* vnode);
 
 void file_table_entry_destroy(struct file_table_entry* fte);
 

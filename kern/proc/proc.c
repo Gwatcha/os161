@@ -61,14 +61,14 @@ struct proc *kproc;
  * Create and return an entry in a proccesses file table with a NULL vnode, and
  * 0 for open_flags, offset, and refcount.
  */
-struct file_table_entry* file_table_entry_create(void) {
+struct file_table_entry* file_table_entry_create(int open_flags, struct vnode* vnode) {
 
         struct file_table_entry* fte = kmalloc(sizeof(struct file_table_entry));
 
-        fte->vnode = NULL;
-        fte->open_flags = 0;
+        fte->vnode = vnode;
         fte->offset = 0;
-	fte->refcount = 0;
+        fte->open_flags = open_flags;
+	fte->refcount = 1;
 
         return fte;
 }
@@ -94,26 +94,21 @@ static
 int
 open_console(struct proc* p, int fd, int flags) {
 
-        struct file_table_entry** file_table = p->p_file_table;
-
-	/* Create a file table entry at fd with 1 refcount and specified flags */
-        file_table[fd] = file_table_entry_create();
-	file_table[fd]->open_flags = flags;
-	file_table[fd]->refcount = 1;
-
-	/* Create the fd's vnode through vfs_open. */
-	struct vnode** file_vnode = &(file_table[fd]->vnode);
-
         char buffer[16];
         strcpy(buffer, "con:");
 
-        int result = vfs_open(buffer, flags, 0, file_vnode);
-	if (result) { /* assumption: handles rest of errors  */
-		file_table_entry_destroy(file_table[fd]);
-		return result;
+        struct vnode* file_vnode;
+        int error = vfs_open(buffer, flags, 0, &file_vnode);
+
+	if (error) { /* assumption: handles rest of errors  */
+		return error;
 	}
 
-        file_table[fd]->vnode = *file_vnode;
+	/* Create the file's vnode through vfs_open. */
+        struct file_table_entry** file_table = p->p_file_table;
+
+	/* Create a file table entry at fd with vnode and specified flags */
+        file_table[fd] = file_table_entry_create(flags, file_vnode);
 
         return 0;
 }
