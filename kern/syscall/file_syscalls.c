@@ -220,10 +220,9 @@ int sys_write(ssize_t *retval, int fd, const void *buf, size_t nbytes)
 
         /* write to the file */
         error = VOP_WRITE(file, &u);
-        if (error == ENOSPC)
-            return ENOSPC;
-        if (error == EIO)
-            return EIO;
+        if (error) {
+                return error;
+        }
 
         /* advance seek position */
         file_table[fd]->offset += (nbytes - u.uio_resid);
