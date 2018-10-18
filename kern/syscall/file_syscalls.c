@@ -130,8 +130,9 @@ int sys_read(ssize_t * retval, int fd, void* buf, size_t buflen)
                 return EBADF;
         }
 
-        if (buflen <= 0) /* TODO: What is the max buflen? */
+        if (buf == NULL) {
     		return EFAULT;
+        }
 
         /* acquire file info */
         off_t offset = file_table[fd]->offset;
