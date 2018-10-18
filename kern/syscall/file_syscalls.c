@@ -27,7 +27,6 @@
    and errno is set according to the error encountered. */
 int sys_open(int* retval, const char *filename, int flags)
 {
-
 	/*
          * Errors
 	 * ENODEV 	The device prefix of filename did not exist.
@@ -171,7 +170,6 @@ int sys_read(ssize_t * retval, int fd, void* buf, size_t buflen)
  */
 int sys_write(ssize_t *retval, int fd, const void *buf, size_t nbytes)
 {
-
         /*
          *  Possible Errors
          *  +  EBADF	fd is not a valid file descriptor, or was not opened for writing.
@@ -377,7 +375,6 @@ int sys_dup2(int *retval, int oldfd, int newfd)
 
 int sys_chdir(const char* pathname)
 {
-
 	/*
 	 * Possible Errors
 	 *    +    ENODEV	The device prefix of pathname did not exist.
