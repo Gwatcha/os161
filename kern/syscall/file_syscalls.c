@@ -79,7 +79,6 @@ int sys_open(int* retval, const char *filename, int flags)
         struct vnode* file_vnode;
         error = vfs_open(kbuffer, flags, 0, &file_vnode);
 	if (error) {
-                /* assumption: handles rest of errors  */
 		return error;
 	}
 
@@ -399,8 +398,9 @@ int sys_chdir(const char* pathname)
 
 	/* change directory */
 	error = vfs_chdir(kbuffer);
-	if (error) /* assumption: handles all other errors */
+	if (error) {
 		return error;
+        }
 
 	return 0;
 }
