@@ -59,14 +59,14 @@ struct proc *kproc;
 
 /*
  * Create and return an entry in a proccesses file table with a NULL vnode, and
- * 0 for mode_flags, offset, and refcount.
+ * 0 for open_flags, offset, and refcount.
  */
 struct file_table_entry* file_table_entry_create(void) {
 
         struct file_table_entry* fte = kmalloc(sizeof(struct file_table_entry));
 
         fte->vnode = NULL;
-        fte->mode_flags = 0;
+        fte->open_flags = 0;
         fte->offset = 0;
 	fte->refcount = 0;
 
@@ -82,7 +82,7 @@ void
 file_table_entry_destroy(struct file_table_entry* fte) {
 	KASSERT(fte->refcount == 0);
         fte->vnode = NULL;
-        fte->mode_flags = 0;
+        fte->open_flags = 0;
         fte->offset = 0;
 	
 
@@ -98,7 +98,7 @@ open_console(struct proc* p, int fd, int flags) {
 
 	/* Create a file table entry at fd with 1 refcount and specified flags */
         file_table[fd] = file_table_entry_create();
-	file_table[fd]->mode_flags = flags;
+	file_table[fd]->open_flags = flags;
 	file_table[fd]->refcount = 1;
 
 	/* Create the fd's vnode through vfs_open. */

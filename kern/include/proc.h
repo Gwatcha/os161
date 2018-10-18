@@ -45,7 +45,7 @@ struct vnode;
 
 struct file_table_entry {
         struct vnode* vnode;
-        int mode_flags;
+        int open_flags;
         off_t offset;
 	int refcount;
 };

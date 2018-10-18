@@ -85,7 +85,7 @@ int sys_open(int* retval, const char *filename, int flags)
 
 	/* Create a file table entry at fd with 1 refcount and specified flags */
         file_table[fd] = file_table_entry_create();
-	file_table[fd]->mode_flags = flags;
+	file_table[fd]->open_flags = flags;
 	file_table[fd]->refcount = 1;
 
         file_table[fd]->vnode = file_vnode;
@@ -129,7 +129,7 @@ int sys_read(ssize_t * retval, int fd, void* buf, size_t buflen)
 		return EBADF;
         }
 
-        if (file_table[fd]->mode_flags & O_WRONLY) {
+        if (file_table[fd]->open_flags & O_WRONLY) {
                 /* The file was opened in writeonly mode and cannot be read */
                 return EBADF;
         }
@@ -201,7 +201,7 @@ int sys_write(ssize_t *retval, int fd, const void *buf, size_t nbytes)
                 return EBADF;
         }
 
-        if ((file_table[fd]->mode_flags & O_ACCMODE) == O_RDONLY) {
+        if ((file_table[fd]->open_flags & O_ACCMODE) == O_RDONLY) {
                 /* The file was opened in readonly mode and should not be written to */
                 return EBADF;
         }
