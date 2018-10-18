@@ -97,7 +97,7 @@ int sys_open(int* retval, const char *filename, int flags)
  *     the location in the file specified by the current seek position of the
  *     file, and stores them in the space pointed to by buf.
  *
- *     Preconditions: fd entry must exist in table and be openned for reading,
+ *     Preconditions:  fd entry must exist in table and be openned for reading,
  *                     otherwise returns EBADF. If a vnode exists, it must be a valid vnode, else
  *                     kernel panics. if part or all of address space pointed to by buf is
  *                     invalid, returns EFAULT. The vnode can not be a directory or a symlink.
