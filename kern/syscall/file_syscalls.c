@@ -278,7 +278,7 @@ int sys_lseek(off_t *retval, int fd, off_t pos, int whence)
                             if ( error )
                                 return error; /* error getting vnode info*/
 
-                            new_cursor = statbuf.st_size - 1 + pos;
+                            new_cursor = statbuf.st_size + pos;
                             if (new_cursor < 0)
                                 return EINVAL; /* negative cursor check */
                             file_table[fd]->offset = new_cursor;
