@@ -438,7 +438,12 @@ int sys___getcwd(int *retval, char* buf, size_t buflen)
                 return EFAULT;
         }
 
-        uio_kinit(&iov, &ku, buf, buflen, 0, UIO_READ);
+        char* kbuf = kmalloc(buflen);
+        if (kbuf == NULL) {
+                kprintf("sys_getcwd failed to allocate %zu bytes\n", buflen);
+                return ENOMEM;
+        }
+        uio_kinit(&iov, &ku, kbuf, buflen, 0, UIO_READ);
 
 	int error = vfs_getcwd(&ku);
 	if (error) {
@@ -447,6 +452,11 @@ int sys___getcwd(int *retval, char* buf, size_t buflen)
         }
 
         const size_t bytes_read = buflen - ku.uio_resid;
+
+        error = copyout(kbuf, (userptr_t)buf, bytes_read);
+        if (error) {
+                return error;
+        }
 
         *retval = bytes_read;
 	return 0;
