@@ -189,22 +189,22 @@ int sys_write(ssize_t *retval, int fd, const void *buf, size_t nbytes)
          *  +  EIO	A hardware I/O error occurred writing the data.
          */
 
-
-        /* Obtain user process' open file table */
-        struct file_table_entry** file_table = curproc->p_file_table;
-
         /* bad fd checks */
         if (fd < 0 || fd >= __OPEN_MAX) {
                 return EBADF;
         }
 
+        /* Obtain user process' open file table */
+        struct file_table_entry** file_table = curproc->p_file_table;
+
         if (file_table[fd] == NULL) {
                 return EBADF;
         }
-        /* TODO: Validate flags */
-        /* (file_table[fd]->mode_flags != O_WRONLY &&  */
-        /* file_table[fd]->mode_flags != O_RDWR && file_table[fd]->mode_flags != O_APPEND ))  */
-        /* return EBADF; */
+
+        if ((file_table[fd]->mode_flags & O_ACCMODE) == O_RDONLY) {
+                /* The file was opened in readonly mode and should not be written to */
+                return EBADF;
+        }
 
         /* acquire file info */
         off_t offset = file_table[fd]->offset;
