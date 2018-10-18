@@ -359,6 +359,12 @@ int sys_dup2(int *retval, int oldfd, int newfd)
                 return EBADF;
         }
 
+        /* From the manual: using dup2 to clone a file handle onto itself has no effect. */
+        if (newfd == oldfd) {
+                *retval = oldfd;
+                return 0;
+        }
+
         if (file_table[newfd] != NULL) {
                 int error = sys_close(newfd);
                 if (error) {
