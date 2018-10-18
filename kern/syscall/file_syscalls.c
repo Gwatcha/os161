@@ -75,20 +75,20 @@ int sys_open(int* retval, const char *filename, int flags)
                 }
         }
 
+	/* Create the fd's vnode through vfs_open. */
+        struct vnode* file_vnode;
+        error = vfs_open(kbuffer, flags, 0, &file_vnode);
+	if (error) {
+                /* assumption: handles rest of errors  */
+		return error;
+	}
+
 	/* Create a file table entry at fd with 1 refcount and specified flags */
         file_table[fd] = file_table_entry_create();
 	file_table[fd]->mode_flags = flags;
 	file_table[fd]->refcount = 1;
 
-	/* Create the fd's vnode through vfs_open. */
-	struct vnode** file_vnode = &(file_table[fd]->vnode);
-        error = vfs_open(kbuffer, flags, 0, file_vnode);
-	if (error) { /* assumption: handles rest of errors  */
-		file_table_entry_destroy(file_table[fd]);
-		return error;
-	}
-
-        file_table[fd]->vnode = *file_vnode;
+        file_table[fd]->vnode = file_vnode;
 
         *retval = fd;
 	return 0;
