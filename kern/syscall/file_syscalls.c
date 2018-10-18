@@ -50,11 +50,6 @@ int sys_open(int* retval, const char *filename, int flags)
 
         struct file_table_entry** file_table = curproc->p_file_table;
 
-	/* Assert flags are valid flags (are defined in fcntl.h) */
-	/* if (flags != O_RDONLY && flags != O_WRONLY && flags != O_RDWR && */
-	/*     flags != O_CREAT && flags != O_EXCL && flags != O_TRUNC && flags != O_APPEND) */
-	/*     return EINVAL; */
-
 	/* safely copy in the user specified path */
         char kbuffer[PATH_MAX];
 	size_t * got = NULL;
@@ -82,7 +77,7 @@ int sys_open(int* retval, const char *filename, int flags)
 		return error;
 	}
 
-	/* Create a file table entry at fd with 1 refcount and specified flags */
+	/* Create a file table entry at fd with file_node and specified flags */
         file_table[fd] = file_table_entry_create(flags, file_vnode);
 
         *retval = fd;
@@ -400,7 +395,6 @@ int sys_chdir(const char* pathname)
 	if (error) /* handles EFAULT */
 		return error;
 
-	/* change directory */
 	error = vfs_chdir(kbuffer);
 	if (error) {
 		return error;
@@ -439,7 +433,6 @@ int sys___getcwd(int *retval, char* buf, size_t buflen)
                 return EFAULT;
         }
 
-	/* Initialize a uio buffer */
         uio_kinit(&iov, &ku, buf, buflen, 0, UIO_READ);
 
 	int error = vfs_getcwd(&ku);
@@ -450,7 +443,6 @@ int sys___getcwd(int *retval, char* buf, size_t buflen)
 
         const size_t bytes_read = buflen - ku.uio_resid;
 
-	/* return length of data returned  */
         *retval = bytes_read;
 	return 0;
 }
