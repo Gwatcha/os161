@@ -81,10 +81,6 @@ struct file_table_entry* file_table_entry_create(int open_flags, struct vnode* v
 void
 file_table_entry_destroy(struct file_table_entry* fte) {
 	KASSERT(fte->refcount == 0);
-        fte->vnode = NULL;
-        fte->open_flags = 0;
-        fte->offset = 0;
-	
 
 	kfree(fte);
 }
