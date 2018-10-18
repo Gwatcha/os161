@@ -128,8 +128,11 @@ int sys_read(ssize_t * retval, int fd, void* buf, size_t buflen)
         if (file_table[fd] == NULL) {
 		return EBADF;
         }
-        /* TODO: Validate flags */
-	/* (file_table[fd]->mode_flags != O_RDONLY && file_table[fd]->mode_flags != O_RDWR ))  */
+
+        if (file_table[fd]->mode_flags & O_WRONLY) {
+                /* The file was opened in writeonly mode and cannot be read */
+                return EBADF;
+        }
 
         if (buflen <= 0) /* TODO: What is the max buflen? */
     		return EFAULT;
