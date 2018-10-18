@@ -106,13 +106,14 @@ int sys_read(ssize_t * retval, int fd, void* buf, size_t buflen)
 	 *    +    EIO		A hardware I/O error occurred reading the data.
 	 */
 
-        /* Obtain user process' open file table */
-        struct file_table_entry** file_table = curproc->p_file_table;
 
         /* bad fd checks */
         if (fd < 0 || fd >= __OPEN_MAX) {
     		return EBADF;
         }
+
+        /* Obtain user process' open file table */
+        struct file_table_entry** file_table = curproc->p_file_table;
 
         if (file_table[fd] == NULL) {
 		return EBADF;
