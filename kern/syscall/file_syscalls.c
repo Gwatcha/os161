@@ -396,8 +396,9 @@ int sys_chdir(const char* pathname)
 	char kbuffer[PATH_MAX];
 	size_t * got = NULL;
 	int error = copyinstr((const_userptr_t) pathname, kbuffer, PATH_MAX, got);
-	if (error) /* handles EFAULT */
-		return error;
+	if (error) {
+                return error; /* handles EFAULT */
+        }
 
 	error = vfs_chdir(kbuffer);
 	if (error) {
