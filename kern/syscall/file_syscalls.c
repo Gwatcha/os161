@@ -145,9 +145,9 @@ int sys_read(ssize_t * retval, int fd, void* buf, size_t buflen)
 
         /* read from the file */
         int error = VOP_READ(file, &u);
-        if (error)  /* handles EIO */
-    		return error;
-
+        if (error) {
+                return error; /* handles EIO */
+        }
         /* safely copy the data into the user buffer */
         error = copyout(kbuf, buf, buflen);
         if (error) /* handles EFAULT */
@@ -209,8 +209,9 @@ int sys_write(ssize_t *retval, int fd, const void *buf, size_t nbytes)
         /* copy the user data in */
         char kbuf[nbytes];
         int error = copyin(buf, kbuf, nbytes);
-        if (error != 0)
-            return EFAULT;
+        if (error) {
+                return error; /* handles EFAULT */
+        }
 
         /* Initialize a uio suitable for I/O from a kernel buffer. */
         struct iovec iov;
@@ -244,15 +245,18 @@ int sys_lseek(off_t *retval, int fd, off_t pos, int whence)
         struct file_table_entry** file_table = curproc->p_file_table;
 
         /* bad fd checks */
-        if (fd < 0 || __OPEN_MAX <= fd)
-            return EBADF;
+        if (fd < 0 || __OPEN_MAX <= fd) {
+                return EBADF;
+        }
 
-        if (file_table[fd] == NULL)
-            return EBADF;
+        if (file_table[fd] == NULL) {
+                return EBADF;
+        }
 
 	/* is seekable check */
-	if (!VOP_ISSEEKABLE(file_table[fd]->vnode))
+	if (!VOP_ISSEEKABLE(file_table[fd]->vnode)) {
 		return ESPIPE;
+        }
 
         /* a stat buf is needed in case we need a files size */
         struct stat statbuf;
