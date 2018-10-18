@@ -29,7 +29,7 @@ int sys_open(int* retval, const char *filename, int flags)
 {
 
 	/*
-         * TODO: Errors
+         * Errors
 	 * ENODEV 	The device prefix of filename did not exist.
 	 * ENOTDIR	A non-final component of filename was not a directory.
 	 * ENOENT	A non-final component of filename did not exist.
@@ -208,7 +208,7 @@ int sys_write(ssize_t *retval, int fd, const void *buf, size_t nbytes)
         struct vnode * file = file_table[fd]->vnode;
 
         /* copy the user data in */
-        char kbuf[nbytes]; /* TODO: safe? */
+        char kbuf[nbytes];
         int error = copyin(buf, kbuf, nbytes);
         if (error != 0)
             return EFAULT;
