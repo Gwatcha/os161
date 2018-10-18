@@ -262,28 +262,36 @@ int sys_lseek(off_t *retval, int fd, off_t pos, int whence)
 
         /* Users have 3 different ways of setting the cursor */
         switch(whence) {
-            case SEEK_SET:  new_cursor = pos;
-                            if (new_cursor < 0)
-                                return EINVAL; /* negative cursor check */
-                            file_table[fd]->offset = pos;
-                            break; /* new position is pos */
+            case SEEK_SET:
+                new_cursor = pos;
+                if (new_cursor < 0) {
+                        return EINVAL; /* negative cursor check */
+                }
+                file_table[fd]->offset = pos;
+                break; /* new position is pos */
 
-            case SEEK_CUR:  new_cursor = file_table[fd]->offset + pos;
-                            if (new_cursor < 0)
-                                return EINVAL; /* negative cursor check */
-                            file_table[fd]->offset = new_cursor;
-                            break; /* new position is cur pos + pos */
+            case SEEK_CUR:
+                new_cursor = file_table[fd]->offset + pos;
+                if (new_cursor < 0) {
+                        return EINVAL; /* negative cursor check */
+                }
+                file_table[fd]->offset = new_cursor;
+                break; /* new position is cur pos + pos */
 
-            case SEEK_END:  error = VOP_STAT(file_table[fd]->vnode, &statbuf);
-                            if ( error )
-                                return error; /* error getting vnode info*/
+            case SEEK_END:
+                error = VOP_STAT(file_table[fd]->vnode, &statbuf);
+                if (error) {
+                        return error; /* error getting vnode info*/
+                }
+                new_cursor = statbuf.st_size + pos;
+                if (new_cursor < 0) {
+                        return EINVAL; /* negative cursor check */
+                }
+                file_table[fd]->offset = new_cursor;
+                break; /* new position is pos EOF + pos */
 
-                            new_cursor = statbuf.st_size + pos;
-                            if (new_cursor < 0)
-                                return EINVAL; /* negative cursor check */
-                            file_table[fd]->offset = new_cursor;
-                            break; /* new position is pos EOF + pos */
-            default : return EINVAL;
+            default:
+                return EINVAL;
         }
 
         *retval = file_table[fd]->offset;
