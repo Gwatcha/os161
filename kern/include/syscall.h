@@ -64,24 +64,24 @@ int sys___time(userptr_t user_seconds, userptr_t user_nanoseconds);
  * File related system calls (see file_syscalls.c)
  */
 
-int sys_open(const char* filename, int flags);
+int sys_open(int* retval, const char* filename, int flags);
 
 // The os161 man pages include a second signature for open.
 // C does not support overloading, so I'm not sure if/how this is supposed to work
 // int open(const char *filename, int flags, mode_t mode);
 
-ssize_t sys_read(int fd, void* buf, size_t buflen);
+int sys_read(ssize_t* retval, int fd, void* buf, size_t buflen);
 
-ssize_t sys_write(int fd, const void* buf, size_t nbytes);
+int sys_write(ssize_t* retval, int fd, const void* buf, size_t nbytes);
 
-off_t sys_lseek(int fd, off_t pos, int whence);
+int sys_lseek(off_t* retval, int fd, off_t pos, int whence);
 
 int sys_close(int fd);
 
-int sys_dup2(int oldfd, int newfd);
+int sys_dup2(int* retval, int oldfd, int newfd);
 
 int sys_chdir(const char* pathname);
 
-int sys___getcwd(char* buf, size_t buflen);
+int sys___getcwd(int* retval, char* buf, size_t buflen);
 
 #endif /* _SYSCALL_H_ */

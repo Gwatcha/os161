@@ -48,11 +48,66 @@
 #include <current.h>
 #include <addrspace.h>
 #include <vnode.h>
+#include <vfs.h>
+#include <kern/unistd.h>
+#include <kern/fcntl.h>
 
 /*
  * The process for the kernel; this holds all the kernel-only threads.
  */
 struct proc *kproc;
+
+/*
+ * Create and return an entry in a proccesses file table with a NULL vnode, and
+ * 0 for open_flags, offset, and refcount.
+ */
+struct file_table_entry* file_table_entry_create(int open_flags, struct vnode* vnode) {
+
+        struct file_table_entry* fte = kmalloc(sizeof(struct file_table_entry));
+
+        fte->vnode = vnode;
+        fte->offset = 0;
+        fte->open_flags = open_flags;
+	fte->refcount = 1;
+
+        return fte;
+}
+
+/*
+ * Destroy a file_table_entry, freeing any memory associated with it. It is an
+ * invariant that refcount is equal to zero before destroying the entry. The vnode
+ * is not affected.
+ */
+void
+file_table_entry_destroy(struct file_table_entry* fte) {
+	KASSERT(fte->refcount == 0);
+
+	kfree(fte);
+}
+
+/* file_table_entry* */
+static
+int
+open_console(struct proc* p, int fd, int flags) {
+
+        char buffer[16];
+        strcpy(buffer, "con:");
+
+        struct vnode* file_vnode;
+        int error = vfs_open(buffer, flags, 0, &file_vnode);
+
+	if (error) { /* assumption: handles rest of errors  */
+		return error;
+	}
+
+	/* Create the file's vnode through vfs_open. */
+        struct file_table_entry** file_table = p->p_file_table;
+
+	/* Create a file table entry at fd with vnode and specified flags */
+        file_table[fd] = file_table_entry_create(flags, file_vnode);
+
+        return 0;
+}
 
 /*
  * Create a proc structure.
@@ -81,6 +136,23 @@ proc_create(const char *name)
 
 	/* VFS fields */
 	proc->p_cwd = NULL;
+
+	/* Initialize the file table */
+        for (int fd = 0; fd < __OPEN_MAX; ++fd) {
+                proc->p_file_table[fd] = NULL;
+        }
+
+        /* TODO Open stdin, stdout, and stderr  */
+        /* open_console(proc, STDIN_FILENO, O_RDONLY); */
+        /* open_console(proc, STDOUT_FILENO, O_WRONLY); */
+        /* open_console(proc, STDERR_FILENO, O_WRONLY); */
+        /*
+        proc->p_file_table[0] = ?
+        proc->p_file_table[1] = ?
+        proc->p_file_table[2] = ?
+        */
+
+        
 
 	return proc;
 }
@@ -217,6 +289,10 @@ proc_create_runprogram(const char *name)
 		newproc->p_cwd = curproc->p_cwd;
 	}
 	spinlock_release(&curproc->p_lock);
+
+        open_console(newproc, STDIN_FILENO, O_RDONLY);
+        open_console(newproc, STDOUT_FILENO, O_WRONLY);
+        open_console(newproc, STDERR_FILENO, O_WRONLY);
 
 	return newproc;
 }

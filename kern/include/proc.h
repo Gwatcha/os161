@@ -43,13 +43,16 @@
 struct addrspace;
 struct vnode;
 
-
 struct file_table_entry {
         struct vnode* vnode;
-        int mode_flages;
         off_t offset;
-        // Other members
+        int open_flags;
+	int refcount;
 };
+
+struct file_table_entry* file_table_entry_create(int open_flags, struct vnode* vnode);
+
+void file_table_entry_destroy(struct file_table_entry* fte);
 
 /*
  * Process structure.
@@ -65,8 +68,8 @@ struct proc {
 	/* VFS */
 	struct vnode *p_cwd;		/* current working directory */
 
-	/* add more material here as needed */
-        struct file_table_entry* file_table[__OPEN_MAX];
+	/* an array of file_table_entries representing this processes open files */
+        struct file_table_entry* p_file_table[__OPEN_MAX];
 };
 
 /* This is the process structure for the kernel and for kernel-only threads. */
