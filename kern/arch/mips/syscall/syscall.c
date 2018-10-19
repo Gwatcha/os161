@@ -187,6 +187,6 @@ syscall(struct trapframe *tf)
  */
 void
 enter_forked_process(struct trapframe *tf)
-{
-	(void)tf;
+{ (void)tf; /* TODO: Fix the trapframe, call a function to take the thread to
+               user mode (mips_usermode) */
 }
