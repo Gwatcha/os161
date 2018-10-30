@@ -44,9 +44,9 @@ struct addrspace;
 struct vnode;
 
 struct file_table_entry {
-        struct vnode* vnode;
-        off_t offset;
-        int open_flags;
+	struct vnode* vnode;
+	off_t offset;
+	int open_flags;
 	int refcount;
 };
 
