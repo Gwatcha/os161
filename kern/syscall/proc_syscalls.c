@@ -215,13 +215,17 @@ sys_execv(const char *program, char **args) {
 
         int err = 0;
         char ** kargs = NULL;
+        char * kprogram = NULL;
         struct addrspace * new_as = NULL;
+        struct vnode * v = NULL;
+        vaddr_t entrypoint, stackptr;
+        struct addrspace * old_as = proc_getas();
 
         /* ---------------------------------------------------------------- */
 
         /*
-         * 1. Copy arguments (args) into a kernel buffer, kargs.
-         *     NOTE: kargs is kmalloced by copyinstr_array, and must be free'd.
+         * 1. Copy arguments (args) into a kernel buffer, kargs, and program
+         * name into kprogram
          */
 
         err = copyinstr_array(args, kargs, ARG_MAX);
@@ -229,25 +233,46 @@ sys_execv(const char *program, char **args) {
                 goto err;
         }
 
+        err = copinstr(program, kprogram, NAME_MAX);
+        if (err) {
+                goto err;
+        }
+
         /*
-         * 2. Create new address space
+         * 2. Load new executable
          */
 
-        new_as = as_create(void); 
+	/* Open the file. */
+	err = vfs_open(kprogram, O_RDONLY, 0, &v);
+	if (err) {
+		return err;
+	}
+	err = load_elf(v, &entrypoint);
+	if (err) {
+            goto err;
+	}
+
+        /*
+         * 3. Create new address space
+         */
+
+        new_as = as_create(); 
 	if (new_as == NULL) {
                 err = ENOMEM:
                 goto err;
 	}
 
         /*
-         * 3. Switch to new address space
-         *     proc_setas
-         *     as_activate
-         *
-         * 4. Load new executable
-         *     load_elf?
-         *     see run-program for example
-         *
+         * 4. Switch to new address space
+         */
+        
+        as_deactivate();
+        proc_setas(new_as);
+        as_activate();
+
+
+
+        /*
          * 5. Define new stack region
          *     as_define_stack
          *     see run_program for example
@@ -275,13 +300,23 @@ sys_execv(const char *program, char **args) {
 
         (void) program;
         (void) *args;
+
+        /* clean up and return */
+        kfree(*kargs);
+        kfree(kargs);
+	vfs_close(v);
         return 0;
 
 err:
         kfree(*kargs);
         kfree(kargs);
-        as_destroy(new_as);
+	vfs_close(v); /* if never opened? */
 
+        /* clean up address */
+        as_deactivate();
+        proc_setas(old_as);
+        as_destroy(new_as); /* if never created? */
+        as_activate();
         return err;
 }
 
