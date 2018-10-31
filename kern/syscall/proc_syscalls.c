@@ -1,7 +1,7 @@
 /*
  * Assignment 5 process related syscalls, contains implementation of syscalls:
- *     read, sys_write, sys_lseek, sys_close, sys_dup2, and sys_chdir. 
- *     
+ *     read, sys_write, sys_lseek, sys_close, sys_dup2, and sys_chdir.
+ *
  *     written by the infamous dream team - recognized world wide as the
  *     'thetraphandlers',
  *
@@ -23,23 +23,25 @@
 
 #include <kern/errno.h>
 
+#include <addrspace.h>
+
 /* ------------------------------------------------------------------------- */
-						/* Private Utility Functions */
+/* Private Utility Functions */
 
 /*
  * copyinstr_array:
  *     given a char** userptr and a pointer to a char** kbuff this function safely
  *     copies it into kbuff, if it is not possible, it returns an error code.
- *     Inputs: 
+ *     Inputs:
  *         char **userptr, an array of pointers to string addresses all in user
  *         memory, the array is also in user memory. To be proper, it has to be
  *         terminated by 0. All strings are null terminated, if not EFAULT is
  *         returned. If the total size of userptr exceeds maxcopy, E2BIG is
  *         returned.
- * 
+ *
  *         char** kbuff, will be overwritten with the address of the memory
  *         associated with kbuff, may have size larger than maxcopy
- * 
+ *
  *         int maxcopy, the max number of bytes to copy before returning E2BIG.
  *
  *     Returns: 0 on success, error code on failure. possible error codes: E2BIG, EFAULT
@@ -49,271 +51,263 @@
  */
 int
 copyinstr_array(char ** user_ptr, char ** kbuff, int maxcopy) {
-	
-	int err = 0;
-	int addr_bytes_copied = 0;  
-	int string_bytes_copied = 0;
 
-	/*
-	 * kernel buffer memory is dynamically allocated throughout the copyin of
-	 * user_ptr, it starts at 128 bytes (2^7) and is doubled if required,
-	 *
-	 * this is done for two kernel buffers, one which holds the addresses
-	 * of strings (kbuff), and one which holds all the strings (kstrings)
-	 *
-	 * kbuff and kstrings are connected so that kbuff[i] points to
-	 * an address inside kstrings which indicates the beginning of a string.
-	 * so kbuff[0] = &kstrings[0] 
-	 */
+        int err = 0;
+        int addr_bytes_copied = 0;
+        int string_bytes_copied = 0;
 
-	int initial_buf_size = 128;
-	kbuff = kmalloc(initial_buf_size); 
-	char * kstrings = kmalloc(initial_buf_size);
-	int kbuff_size = initial_buf_size; 
-	int kstrings_size = initial_buf_size;
+        /*
+         * kernel buffer memory is dynamically allocated throughout the copyin of
+         * user_ptr, it starts at 128 bytes (2^7) and is doubled if required,
+         *
+         * this is done for two kernel buffers, one which holds the addresses
+         * of strings (kbuff), and one which holds all the strings (kstrings)
+         *
+         * kbuff and kstrings are connected so that kbuff[i] points to
+         * an address inside kstrings which indicates the beginning of a string.
+         * so kbuff[0] = &kstrings[0]
+         */
 
-	int i = 0; /* used as index for user_ptr[] and kbuff[] */
-	int s = 0; /* keeps track of the next available spot in kstrings */
+        int initial_buf_size = 128;
+        kbuff = kmalloc(initial_buf_size);
+        char * kstrings = kmalloc(initial_buf_size);
+        int kbuff_size = initial_buf_size;
+        int kstrings_size = initial_buf_size;
 
-	/* when this loop exits, we have either encountered an error or have
-	 * succesfully copied user_ptr into kbuff. on each iteration, we copyin the
-	 * next string's address, and copyin the string for that address. In doing
-	 * so, we make sure to break on error or termination, as well as resize
-	 * kbuff and kstring if needed */
-	while( true ) {
+        int i = 0; /* used as index for user_ptr[] and kbuff[] */
+        int s = 0; /* keeps track of the next available spot in kstrings */
 
-		/*
-		 * copy in string address at i
-		 */
+        /* when this loop exits, we have either encountered an error or have
+         * finished copying user memory. on each iteration, we copyin the next
+         * string's address, and copyin the string for that address. In doing
+         * so, we make sure to break on error or termination, as well as resize
+         * kbuff and kstring if needed */
+        while( true ) {
 
-		char * temp;
-		err = copyin( (const_userptr_t) user_ptr[i], temp, sizeof(char*) );
-		addr_bytes_copied += sizeof(char*);
-		if (err) {
-			break;
-		}
-		if (maxcopy < addr_bytes_copied + string_bytes_copied) {
-		   err = E2BIG;
-		   break;
-		}
+                /*
+                 * copy in string address at user_ptr[i] to kbuff[i]
+                 */
 
-		/* termination case */
-		if (temp == 0) {
-			break;
-		}
+                char * temp;
+                err = copyin( (const_userptr_t) (user_ptr + i), temp, sizeof(char*) );
+                addr_bytes_copied += sizeof(char*);
+                if (err) {
+                        break;
+                }
+                if (maxcopy < addr_bytes_copied + string_bytes_copied) {
+                        err = E2BIG;
+                        break;
+                }
 
-		kbuff[i] = temp;
+                /* termination case */
+                if (temp == 0) {
+                        break;
+                }
 
-		/* resize kbuff case */
-		if (addr_bytes_copied == kbuff_size) {
-			char ** koldbuff = kbuff;
-			kbuff = kmalloc(kbuff_size*2);
-			memcpy(kbuff, koldbuff, kbuff_size); /* TODO: Does it work? */
-			kbuff_size *= 2;
-		}
-			
-		/*
-		 * copy in the string at address kbuff[i] into kstrings[s]
-		 */
+                kbuff[i] = temp;
 
-		/* len for copyinstr is just the space left in kstrings*/
-		ssize_t	len = kstrings_size - string_bytes_copied; 
-		ssize_t got;
-		err = copyinstr( (const_userptr_t) (user_ptr[i]*), kstrings[s], &len, &got);
-		if (err == EFAULT) {
-			break;
-		}
-		/* resize kstrings case (loop because we may do succesive resizes for this string) */
-		while (err == ENAMETOOLONG) {
-			err = 0; 
-			/* check if too big */
-			if ( maxcopy < kstrings_size + addr_bytes_copied ) {
-				err = E2BIG;
-				break;
-			}
-			/* resize */
-			char * koldstrings = kstrings;
-			kstrings = kmalloc(kstrings_size*2);
-			memcpy(koldstrings, kstrings, kstrings_size); /* TODO: Does it work? */
-			kstrings_size *= 2;
+                /* resize kbuff case */
+                if (addr_bytes_copied == kbuff_size) {
+                        char ** koldbuff = kbuff;
+                        kbuff = kmalloc(kbuff_size*2);
+                        memcpy(kbuff, koldbuff, kbuff_size);
+                        kbuff_size *= 2;
+                }
 
-			/* retry copyinstr */
-			len = kstrings_size - string_bytes_copied; 
-			err = copyinstr( (const_userptr_t) (user_ptr[i]*), kstrings[s], &len, &got); /* TODO: Null terminator? */
-			if (err == EFAULT) {
-				break;
-			}
-		}
+                /*
+                 * copy in the string at address kbuff[i] into kstrings[s]
+                 */
 
-		/* we have successively copied the next string in */
-		string_bytes_copied += got;
+                /* len for copyinstr is just the space left in kstrings*/
+                size_t	len = kstrings_size - string_bytes_copied;
+                size_t got;
+                err = copyinstr( (const_userptr_t) kbuff[i], (kstrings + s), len, &got);
+                /* resize kstrings case (loop because we may do succesive resizes for this string) */
+                while (err == ENAMETOOLONG) {
+                        err = 0;
+                        /* check if too big */
+                        if ( maxcopy < kstrings_size + addr_bytes_copied ) {
+                                err = E2BIG;
+                                break;
+                        }
+                        /* resize */
+                        char * koldstrings = kstrings;
+                        kstrings = kmalloc(kstrings_size*2);
+                        memcpy(koldstrings, kstrings, kstrings_size);
+                        kstrings_size *= 2;
 
+                        /* retry copyinstr */
+                        len = kstrings_size - string_bytes_copied;
+                        err = copyinstr( (const_userptr_t) user_ptr[i], (kstrings + s), len, &got);
+                        if (err == EFAULT) {
+                                break;
+                        }
+                }
 
+                if (err == EFAULT) {
+                        break;
+                }
 
-		if (maxcopy < addr_bytes_copied + string_bytes_copied) {
-		   err = E2BIG;
-		   break;
-		}
+                /* we have successively copied the next string in */
+                string_bytes_copied += got;
+                s += got;
 
-		i += 1;
-	}
+                /* store this strings length in kbuff[i], this is to make it easier to
+                   set up all the pointers from kbuff to kstrings afterwards. */
+                kbuff[i] = (char*) got;
 
-	/* clean up code in case of error */
-	if (err) {
-		kfree(kbuff);
-		kfree(kstrings);
-		return err;
-	}
+                if (maxcopy < addr_bytes_copied + string_bytes_copied) {
+                        err = E2BIG;
+                        break;
+                }
 
-		/*
-		 * TODO:
-		 * need to setup kbuff to point to proper strings, I don't think we can do
-		 * that for each one, because kstrings may be deallocated, thus
-		 * resulting in kbuff entries poining to free memory 
-		 */
+                i += 1;
+        }
 
+        /* clean up code in case of error */
+        if (err) {
+                kfree(kbuff);
+                kfree(kstrings);
+                return err;
+        }
 
-	/* if we are here, it is an invariant that kbuff[i] = user_ptr[i] for i up to */
-	/* and including the index with 0 */
+        /* lastly, set up kbuff to point to the strings in kstrings
+           note that i is equal to the end of kbuff + 1 */
+        s = 0; /* used as index into kstrings */
+        for (int j = 0; j < i; j++) {
+                s += (int) kbuff[j]; /* both 32 bits */
+                kbuff[j] = &kstrings[s];
+        }
 
-	/* DEBUG ONLY: check the invariant */
-	for (unsigned int i = 0; kbuff[i] != 0; i++) {
-		char * temp = NULL;
-		copyin( (const_userptr_t) user_ptr[i], temp, sizeof(char*) );
-		KASSERT(kbuff[i] == temp);
-	}    
+        /* if we are here, it is an invariant that kbuff[i] = user_ptr[i] for i up to
+           and including the index with 0 */
 
-	return 0;
-}   
+        /* DEBUG ONLY: check the invariant */
+        for (unsigned int i = 0; kbuff[i] != 0; i++) {
+                char * temp = NULL;
+                copyin( (const_userptr_t) user_ptr[i], temp, sizeof(char*) );
+                KASSERT(kbuff[i] == temp);
+        }
 
-						/* Private Utility Functions */
+        return 0;
+}
+
+/* Private Utility Functions */
 /* ------------------------------------------------------------------------- */
-							/* System calls */
+/* System calls */
 
 
-int  
+int
 sys_execv(const char *program, char **args) {
 
-	/*
-	 * May return these errors:
-	 * ENODEV	The device prefix of program did not exist.
-	 * ENOTDIR	A non-final component of program was not a directory.
-	 * ENOENT	program did not exist.
-	 * EISDIR	program is a directory.
-	 * ENOEXEC	program is not in a recognizable executable file format, was for the wrong platform, or contained invalid fields.
-	 * ENOMEM	Insufficient virtual memory is available.
-	 * E2BIG	The total size of the argument strings exceeeds ARG_MAX.
-	 * EIO		A hard I/O error occurred.
-	 * EFAULT	One of the arguments is an invalid pointer.	
-	 */
+        /*
+         * May return these errors:
+         * ENODEV	The device prefix of program did not exist.
+         * ENOTDIR	A non-final component of program was not a directory.
+         * ENOENT	program did not exist.
+         * EISDIR	program is a directory.
+         * ENOEXEC	program is not in a recognizable executable file format, was for the wrong platform, or contained invalid fields.
+         * ENOMEM	Insufficient virtual memory is available.
+         * E2BIG	The total size of the argument strings exceeeds ARG_MAX.
+         * EIO		A hard I/O error occurred.
+         * EFAULT	One of the arguments is an invalid pointer.
+         */
 
-	int err = 0;
+        int err = 0;
+        char ** kargs = NULL;
+        struct addrspace * new_as = NULL;
 
-	/* ---------------------------------------------------------------- */
+        /* ---------------------------------------------------------------- */
 
-	/*
-	 * 1. Copy arguments (args) into a kernel buffer, kargs.
-	 *     NOTE: kargs is kmalloced by copyinstr_array, and must be free'd.
-	 */
+        /*
+         * 1. Copy arguments (args) into a kernel buffer, kargs.
+         *     NOTE: kargs is kmalloced by copyinstr_array, and must be free'd.
+         */
 
-	char ** kargs = NULL;
-	err = copyinstr_array(args, kargs, ARG_MAX);
-	if (err) goto err;
-	
-		/*
-		 * kernel memory is dynamically allocated throughout the copyin of
-		 * args, it starts at 128 bytes (2^7) and is doubled if required,
-		 * capping at a max size of 65536 (2^16). 1536 above MAX_ARG. 
-		 *
-		 * this is done for two kernel buffers, one which holds the addresses
-		 * of strings (kargs), and one which holds all the strings (kstrings)
-		 */
+        err = copyinstr_array(args, kargs, ARG_MAX);
+        if (err) {
+                goto err;
+        }
 
+        /*
+         * 2. Create new address space
+         */
 
+        new_as = as_create(void); 
+	if (new_as == NULL) {
+                err = ENOMEM:
+                goto err;
+	}
 
-		/*
-		 * when copyargs: is done, kargs[i] = args[i] for the entire length of
-		 * args[i], or an error message is returned execution starts here on
-		 * each resize of kargs, therefore, the max number of times copyargs is
-		 * branched to is 10 
-		 */
+        /*
+         * 3. Switch to new address space
+         *     proc_setas
+         *     as_activate
+         *
+         * 4. Load new executable
+         *     load_elf?
+         *     see run-program for example
+         *
+         * 5. Define new stack region
+         *     as_define_stack
+         *     see run_program for example
+         *
+         * 6. Copy arguments to new address space, properly arranging them
+         *     NOTE: Always use copy_in API to touch user memory
+         *
+         *     Arguments are pointers in registers into user space
+         *       - a0: null-terminated char* pointer to program name in user space
+         *       - a1: null-terminated char** pointer to argument vector in user space
+         *     Need to copy this information somewhere into the new address space
+         *
+         *     There is a maximum number of arguments
+         *     - Null terminator must occur after an appropriate number of arguments
+         *     - It is an error if null terminator is not encountered within the appropriate number of args
+         *       - If there is no null-terminator, the addresses received are probably garbage
+         *
+         * 7. Clean up old address space
+         *     as_destroy
+         *     NOT TOO SOON: must come back to the old address space if exec fails
+         *
+         * 8. Warp to user mode
+         *     - enter_new_process
+         */
 
-	/*
-	 * 2. Get new address space
-	 *     as_create
-	 * 
-	 * 3. Switch to new address space
-	 *     proc_setas
-	 *     as_activate
-	 * 
-	 * 4. Load new executable
-	 *     load_elf?
-	 *     see run-program for example
-	 * 
-	 * 5. Define new stack region
-	 *     as_define_stack
-	 *     see run_program for example
-	 * 
-	 * 6. Copy arguments to new address space, properly arranging them
-	 *     NOTE: Always use copy_in API to touch user memory
-	 * 
-	 *     Arguments are pointers in registers into user space
-	 *       - a0: null-terminated char* pointer to program name in user space
-	 *       - a1: null-terminated char** pointer to argument vector in user space
-	 *     Need to copy this information somewhere into the new address space
-	 * 
-	 *     There is a maximum number of arguments
-	 *     - Null terminator must occur after an appropriate number of arguments
-	 *     - It is an error if null terminator is not encountered within the appropriate number of args
-	 *       - If there is no null-terminator, the addresses received are probably garbage
-	 * 
-	 * 7. Clean up old address space
-	 *     as_destroy
-	 *     NOT TOO SOON: must come back to the old address space if exec fails
-	 * 
-	 * 8. Warp to user mode
-	 *     - enter_new_process 
-	 */
-
-	(void) program;
-   	(void) *args;
-	return 0;
+        (void) program;
+        (void) *args;
+        return 0;
 
 err:
-	kfree(*kargs);
-	kfree(kargs);
-	return err;
-}	
+        kfree(*kargs);
+        kfree(kargs);
+        as_destroy(new_as);
 
-int 
+        return err;
+}
+
+int
 sys_fork(pid_t* retval) {
-	(void)  retval;
-	return 0;
+        (void)  retval;
+        return 0;
 }
 
-int 
+int
 sys_getpid(pid_t* retval) {
-	(void) retval;
-	return 0;
+        (void) retval;
+        return 0;
 }
 
-int 
+int
 sys_waitpid(pid_t* retval, pid_t pid, int *status, int options) {
-	(void) retval;
-   	(void) pid;
-   	(void) *status;
-   	(void) options;
-	return 0;
+        (void) retval;
+        (void) pid;
+        (void) *status;
+        (void) options;
+        return 0;
 }
 
-int 
+int
 sys__exit(int exitcode) {
-	(void) exitcode;
-	return 0;
+        (void) exitcode;
+        return 0;
 }
-
-}
-
-
-
-
