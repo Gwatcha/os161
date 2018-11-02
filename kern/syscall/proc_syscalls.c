@@ -378,8 +378,7 @@ sys_waitpid(pid_t* retval, pid_t pid, int *status, int options) {
         return 0;
 }
 
-int
-sys__exit(int exitcode) {
-        (void) exitcode;
-        return 0;
+void
+sys__exit() {
+        thread_exit();
 }
