@@ -89,7 +89,7 @@ int sys___getcwd(int* retval, char* buf, size_t buflen);
  */
 int sys_execv(const char *program, char **args); 
 
-int sys_fork(pid_t* retval);
+int sys_fork(pid_t* retval, struct trapframe* trapframe);
 
 int sys_getpid(pid_t* retval);
 

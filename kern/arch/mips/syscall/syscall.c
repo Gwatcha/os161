@@ -173,7 +173,7 @@ syscall(struct trapframe *tf)
 		 */
 
 		case SYS_fork: /* parent returns here */
-			err = sys_fork(&retval);
+                        err = sys_fork(&retval, tf);
 			break;
 
 		case SYS_execv: 
@@ -236,7 +236,17 @@ syscall(struct trapframe *tf)
  * Thus, you can trash it and do things another way if you prefer.
  */
 void
-enter_forked_process(struct trapframe *tf)
-{ (void)tf; /* TODO: Fix the trapframe, call a function to take the thread to
+enter_forked_process(struct trapframe *parent_tf_copy)
+{
+        /* TODO: Fix the trapframe, call a function to take the thread to
                user mode (mips_usermode) */
+
+        struct trapframe child_tf;
+        memcpy(&child_tf, parent_tf_copy, sizeof(struct trapframe));
+
+        /* Free the copy of the parent's trapframe */
+        kfree(parent_tf_copy);
+
+        /* mips_usermode(&mytf); */
+        enter_forked_process(tfcopy);
 }

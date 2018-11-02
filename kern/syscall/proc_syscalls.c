@@ -17,6 +17,8 @@
 #include <copyinout.h>
 #include <vfs.h>
 
+#include <mips/trapframe.h>
+
 #include <proc.h>
 #include <current.h>
 
@@ -324,8 +326,15 @@ err:
         return err;
 }
 
+static
+void
+enter_forked_process_wrapper(void* data1, unsigned long data2) {
+        (void)data2;
+        enter_forked_process((struct trapframe*)data1);
+}
+
 int
-sys_fork(pid_t* retval) {
+sys_fork(pid_t* retval, struct trapframe* trapframe) {
 
         /* Create child process with proc_create */
         struct proc* newproc = proc_create_runprogram(curproc->p_name);
@@ -343,9 +352,14 @@ sys_fork(pid_t* retval) {
 
         /* TODO: Create kernel thread */
 
-        /* TODO: Call enter forked process */
+        /* Create a copy of the trapframe for the child */
+        struct trapframe* tf_copy = kmalloc(sizeof(struct trapframe));
+        memcpy(tf_copy, trapframe, sizeof(struct trapframe));
 
-        (void)  retval;
+        /* Fork the child process */
+        thread_fork("child", newproc, &enter_forked_process_wrapper, tfcopy, 0);
+
+        *retval = newproc->pid;
         return 0;
 }
 
