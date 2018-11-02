@@ -15,6 +15,7 @@
 #include <types.h>
 #include <syscall.h>
 #include <copyinout.h>
+#include <vfs.h>
 
 #include <proc.h>
 #include <current.h>
@@ -22,6 +23,7 @@
 #include <limits.h>
 
 #include <kern/errno.h>
+#include <kern/fcntl.h>
 
 #include <addrspace.h>
 
@@ -49,6 +51,7 @@
  *                     and kfree(kbuff) when finished with kbuff. If
  *                     unsucessful, caller is discard kbuff.
  */
+static
 int
 copyinstr_array(char ** user_ptr, char ** kbuff, int maxcopy) {
 
@@ -88,7 +91,7 @@ copyinstr_array(char ** user_ptr, char ** kbuff, int maxcopy) {
                  * copy in string address at user_ptr[i] to kbuff[i]
                  */
 
-                char * temp;
+                char* temp = NULL;
                 err = copyin( (const_userptr_t) (user_ptr + i), temp, sizeof(char*) );
                 addr_bytes_copied += sizeof(char*);
                 if (err) {
@@ -218,7 +221,7 @@ sys_execv(const char *program, char **args) {
         char * kprogram = NULL;
         struct addrspace * new_as = NULL;
         struct vnode * v = NULL;
-        vaddr_t entrypoint, stackptr;
+        vaddr_t entrypoint; // , stackptr;
         struct addrspace * old_as = proc_getas();
 
         /* ---------------------------------------------------------------- */
@@ -233,7 +236,8 @@ sys_execv(const char *program, char **args) {
                 goto err;
         }
 
-        err = copinstr(program, kprogram, NAME_MAX);
+        size_t got;
+        err = copyinstr((const_userptr_t)program, kprogram, NAME_MAX, &got);
         if (err) {
                 goto err;
         }
@@ -258,7 +262,7 @@ sys_execv(const char *program, char **args) {
 
         new_as = as_create(); 
 	if (new_as == NULL) {
-                err = ENOMEM:
+                err = ENOMEM;
                 goto err;
 	}
 
@@ -323,7 +327,11 @@ err:
 int
 sys_fork(pid_t* retval) {
 
+        /* const proc* curproc = curproc; */
+        /* struct proc* newproc = kmalloc(sizeof(struct proc)); */
+
         /* TODO: Copy the address space */
+
 
         /* TODO: Copy the file table */
 
