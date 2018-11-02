@@ -307,6 +307,9 @@ proc_create_runprogram(const char *name)
         open_console(newproc, STDOUT_FILENO, O_WRONLY);
         open_console(newproc, STDERR_FILENO, O_WRONLY);
 
+        /* TEMP HACK: assign 1 as pid */
+        newproc->pid = 1;
+
 	return newproc;
 }
 

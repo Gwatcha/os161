@@ -62,6 +62,7 @@ void file_table_copy(file_table* file_table_in, file_table* file_table_out);
  */
 struct proc {
 	char *p_name;			/* Name of this process */
+        int pid;                        /* ID of this process */
 	struct spinlock p_lock;		/* Lock for this structure */
 	struct threadarray p_threads;	/* Threads in this process */
 
