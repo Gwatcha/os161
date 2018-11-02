@@ -322,6 +322,17 @@ err:
 
 int
 sys_fork(pid_t* retval) {
+
+        /* TODO: Copy the address space */
+
+        /* TODO: Copy the file table */
+
+        /* TODO: Copy threads */
+
+        /* TODO: Create kernel thread */
+
+        /* TODO: Call enter forked process */
+
         (void)  retval;
         return 0;
 }
