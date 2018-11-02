@@ -333,14 +333,17 @@ enter_forked_process_wrapper(void* data1, unsigned long data2) {
         enter_forked_process((struct trapframe*)data1);
 }
 
+/* TEMP HACK: static pid counter */
+static int pidcount = 0;
+
 int
 sys_fork(pid_t* retval, struct trapframe* trapframe) {
 
         /* Create child process with proc_create */
         struct proc* newproc = proc_create_runprogram(curproc->p_name);
 
-        /* TEMP HACK: use parent's pid + 1 */
-        newproc->pid = curproc->pid + 1;
+        /* TEMP HACK: static pid counter */
+        newproc->pid = ++pidcount;
 
         /* Copy the address space */
         as_copy(curproc->p_addrspace, &newproc->p_addrspace);
