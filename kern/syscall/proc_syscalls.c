@@ -328,9 +328,10 @@ int
 sys_fork(pid_t* retval) {
 
         /* const proc* curproc = curproc; */
-        /* struct proc* newproc = kmalloc(sizeof(struct proc)); */
+        struct proc* newproc = kmalloc(sizeof(struct proc));
 
-        /* TODO: Copy the address space */
+        /* Copy the address space */
+        as_copy(curproc->p_addrspace, &newproc->p_addrspace);
 
 
         /* TODO: Copy the file table */
