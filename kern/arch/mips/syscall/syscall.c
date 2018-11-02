@@ -236,17 +236,21 @@ syscall(struct trapframe *tf)
  * Thus, you can trash it and do things another way if you prefer.
  */
 void
-enter_forked_process(struct trapframe *parent_tf_copy)
+enter_forked_process(struct trapframe *copy_of_parent_tf)
 {
-        /* TODO: Fix the trapframe, call a function to take the thread to
-               user mode (mips_usermode) */
-
         struct trapframe child_tf;
-        memcpy(&child_tf, parent_tf_copy, sizeof(struct trapframe));
+        memcpy(&child_tf, copy_of_parent_tf, sizeof(struct trapframe));
 
         /* Free the copy of the parent's trapframe */
-        kfree(parent_tf_copy);
+        kfree(copy_of_parent_tf);
 
-        /* mips_usermode(&mytf); */
-        enter_forked_process(tfcopy);
+        /* Fix the trapframe */
+        child_tf.tf_v0 = 0;   /* Return value of 0 */
+        child_tf.tf_a3 = 0;   /* No error */
+        child_tf.tf_epc += 4; /* Advance the program counter */
+
+        /* kprintf("Fixed up trap frame!"); */
+        /* while(true); */
+
+        mips_usermode(&child_tf);
 }
