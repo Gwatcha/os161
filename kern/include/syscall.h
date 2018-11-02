@@ -89,12 +89,12 @@ int sys___getcwd(int* retval, char* buf, size_t buflen);
  */
 int sys_execv(const char *program, char **args); 
 
-int sys_fork(pid_t* retval);
+int sys_fork(pid_t* retval, struct trapframe* trapframe);
 
 int sys_getpid(pid_t* retval);
 
 int sys_waitpid(pid_t* retval, pid_t pid, int *status, int options);
 
-int sys__exit(int exitcode); 
+void sys__exit(void);
 
 #endif /* _SYSCALL_H_ */

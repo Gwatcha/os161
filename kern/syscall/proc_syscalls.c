@@ -15,6 +15,9 @@
 #include <types.h>
 #include <syscall.h>
 #include <copyinout.h>
+#include <vfs.h>
+
+#include <mips/trapframe.h>
 
 #include <proc.h>
 #include <current.h>
@@ -22,6 +25,7 @@
 #include <limits.h>
 
 #include <kern/errno.h>
+#include <kern/fcntl.h>
 
 #include <addrspace.h>
 
@@ -49,6 +53,7 @@
  *                     and kfree(kbuff) when finished with kbuff. If
  *                     unsucessful, caller is discard kbuff.
  */
+static
 int
 copyinstr_array(char ** user_ptr, char ** kbuff, int maxcopy) {
 
@@ -88,7 +93,7 @@ copyinstr_array(char ** user_ptr, char ** kbuff, int maxcopy) {
                  * copy in string address at user_ptr + i to kbuff[i]
                  */
 
-                char * temp;
+                char* temp = NULL;
                 err = copyin( (const_userptr_t) (user_ptr + i), temp, sizeof(char*) );
                 addr_bytes_copied += sizeof(char*);
                 if (err) {
@@ -219,7 +224,6 @@ sys_execv(const char *program, char **args) {
         char * kprogram = NULL;
 
         struct vnode * v = NULL;
-
         struct addrspace * new_as = NULL;
         vaddr_t entrypoint, stackptr;
         struct addrspace * old_as = proc_getas();
@@ -240,7 +244,8 @@ sys_execv(const char *program, char **args) {
                 goto err;
         }
 
-        err = copinstr(program, kprogram, NAME_MAX);
+        size_t got;
+        err = copyinstr((const_userptr_t)program, kprogram, NAME_MAX, &got);
         if (err) {
                 goto err;
         }
@@ -252,7 +257,7 @@ sys_execv(const char *program, char **args) {
 
         new_as = as_create(); 
 	if (new_as == NULL) {
-                err = ENOMEM:
+                err = ENOMEM;
                 goto err;
 	}
 
@@ -332,15 +337,49 @@ err:
         return err;
 }
 
+static
+void
+enter_forked_process_wrapper(void* data1, unsigned long data2) {
+        (void)data2;
+        enter_forked_process((struct trapframe*)data1);
+}
+
+/* TEMP HACK: static pid counter */
+static int pidcount = 0;
+
 int
-sys_fork(pid_t* retval) {
-        (void)  retval;
+sys_fork(pid_t* retval, struct trapframe* trapframe) {
+
+        /* Create child process with proc_create */
+        struct proc* newproc = proc_create_runprogram(curproc->p_name);
+
+        /* TEMP HACK: static pid counter */
+        newproc->pid = ++pidcount;
+
+        /* Copy the address space */
+        as_copy(curproc->p_addrspace, &newproc->p_addrspace);
+
+        /* Copy the file table */
+        file_table_copy(&curproc->p_file_table, &newproc->p_file_table);
+
+        /* TODO: Copy threads */
+
+        /* TODO: Create kernel thread */
+
+        /* Create a copy of the trapframe for the child */
+        struct trapframe* tf_copy = kmalloc(sizeof(struct trapframe));
+        memcpy(tf_copy, trapframe, sizeof(struct trapframe));
+
+        /* Fork the child process */
+        thread_fork("child", newproc, &enter_forked_process_wrapper, tf_copy, 0);
+
+        *retval = newproc->pid;
         return 0;
 }
 
 int
 sys_getpid(pid_t* retval) {
-        (void) retval;
+        *retval = curproc->pid;
         return 0;
 }
 
@@ -353,8 +392,7 @@ sys_waitpid(pid_t* retval, pid_t pid, int *status, int options) {
         return 0;
 }
 
-int
-sys__exit(int exitcode) {
-        (void) exitcode;
-        return 0;
+void
+sys__exit() {
+        thread_exit();
 }

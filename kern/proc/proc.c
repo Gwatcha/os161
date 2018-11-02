@@ -85,6 +85,19 @@ file_table_entry_destroy(struct file_table_entry* fte) {
 	kfree(fte);
 }
 
+void
+file_table_copy(file_table* file_table_in, file_table* file_table_out) {
+
+        for (size_t i = 0; i < __OPEN_MAX; ++i) {
+
+                (*file_table_out)[i] = (*file_table_in)[i];
+
+                if ((*file_table_out)[i] != NULL) {
+                        (*file_table_out)[i]->refcount++;
+                }
+        }
+}
+
 /* file_table_entry* */
 static
 int
@@ -293,6 +306,9 @@ proc_create_runprogram(const char *name)
         open_console(newproc, STDIN_FILENO, O_RDONLY);
         open_console(newproc, STDOUT_FILENO, O_WRONLY);
         open_console(newproc, STDERR_FILENO, O_WRONLY);
+
+        /* TEMP HACK: assign 1 as pid */
+        newproc->pid = 1;
 
 	return newproc;
 }

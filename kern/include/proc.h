@@ -49,16 +49,20 @@ struct file_table_entry {
 	int open_flags;
 	int refcount;
 };
+typedef struct file_table_entry* file_table[__OPEN_MAX];
 
 struct file_table_entry* file_table_entry_create(int open_flags, struct vnode* vnode);
 
 void file_table_entry_destroy(struct file_table_entry* fte);
+
+void file_table_copy(file_table* file_table_in, file_table* file_table_out);
 
 /*
  * Process structure.
  */
 struct proc {
 	char *p_name;			/* Name of this process */
+        int pid;                        /* ID of this process */
 	struct spinlock p_lock;		/* Lock for this structure */
 	struct threadarray p_threads;	/* Threads in this process */
 
@@ -69,7 +73,7 @@ struct proc {
 	struct vnode *p_cwd;		/* current working directory */
 
 	/* an array of file_table_entries representing this processes open files */
-        struct file_table_entry* p_file_table[__OPEN_MAX];
+        file_table p_file_table;
 };
 
 /* This is the process structure for the kernel and for kernel-only threads. */
