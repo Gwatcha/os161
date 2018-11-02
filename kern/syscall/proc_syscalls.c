@@ -8,8 +8,8 @@
  *     syscall specs may be found at http://ece.ubc.ca/~os161/man/syscall/, the
  *     only difference in the interface between the man page and these is that
  *     the return value is either 0, indicating success, or an error code,
- *     indicating failure. The actual return value is placed in the first
- *     parameter.
+ *     indicating failure. The actual return value (if existent) is placed in
+ *     the first parameter.
  */
 
 #include <types.h>
@@ -28,7 +28,7 @@
 /* ------------------------------------------------------------------------- */
 /* Private Utility Functions */
 
-/*
+/* TODO: May be better to have a larger function which copies in and out
  * copyinstr_array:
  *     given a char** userptr and a pointer to a char** kbuff this function safely
  *     copies it into kbuff, if it is not possible, it returns an error code.
@@ -55,6 +55,7 @@ copyinstr_array(char ** user_ptr, char ** kbuff, int maxcopy) {
         int err = 0;
         int addr_bytes_copied = 0;
         int string_bytes_copied = 0;
+        int initial_buf_size = 128;
 
         /*
          * kernel buffer memory is dynamically allocated throughout the copyin of
@@ -68,7 +69,6 @@ copyinstr_array(char ** user_ptr, char ** kbuff, int maxcopy) {
          * so kbuff[0] = &kstrings[0]
          */
 
-        int initial_buf_size = 128;
         kbuff = kmalloc(initial_buf_size);
         char * kstrings = kmalloc(initial_buf_size);
         int kbuff_size = initial_buf_size;
@@ -85,7 +85,7 @@ copyinstr_array(char ** user_ptr, char ** kbuff, int maxcopy) {
         while( true ) {
 
                 /*
-                 * copy in string address at user_ptr[i] to kbuff[i]
+                 * copy in string address at user_ptr + i to kbuff[i]
                  */
 
                 char * temp;
@@ -214,12 +214,19 @@ sys_execv(const char *program, char **args) {
          */
 
         int err = 0;
+
         char ** kargs = NULL;
         char * kprogram = NULL;
-        struct addrspace * new_as = NULL;
+
         struct vnode * v = NULL;
+
+        struct addrspace * new_as = NULL;
         vaddr_t entrypoint, stackptr;
         struct addrspace * old_as = proc_getas();
+
+        /* deactivate address space since it will be in a volatile state, in
+         * DUMBVIM, this does nothing */
+        as_deactivate(); 
 
         /* ---------------------------------------------------------------- */
 
@@ -238,22 +245,9 @@ sys_execv(const char *program, char **args) {
                 goto err;
         }
 
-        /*
-         * 2. Load new executable
-         */
-
-	/* Open the file. */
-	err = vfs_open(kprogram, O_RDONLY, 0, &v);
-	if (err) {
-		return err;
-	}
-	err = load_elf(v, &entrypoint);
-	if (err) {
-            goto err;
-	}
 
         /*
-         * 3. Create new address space
+         * 2. Create new address space
          */
 
         new_as = as_create(); 
@@ -263,59 +257,77 @@ sys_execv(const char *program, char **args) {
 	}
 
         /*
-         * 4. Switch to new address space
+         * 3. Switch to new address space
          */
         
-        as_deactivate();
         proc_setas(new_as);
-        as_activate();
 
+        /*
+         * 4. Load new executable
+         */
 
+	/* Open the file. */
+	err = vfs_open(kprogram, O_RDONLY, 0, &v);
+	if (err) {
+	        goto err;
+	}
+	err = load_elf(v, &entrypoint);
+	if (err) {
+                goto err;
+	}
 
         /*
          * 5. Define new stack region
-         *     as_define_stack
-         *     see run_program for example
-         *
+         */
+
+	/* Define the user stack in the new address space */
+	err = as_define_stack(new_as, &stackptr);
+	if (err) {
+		return err;
+	}
+
+        /*
          * 6. Copy arguments to new address space, properly arranging them
-         *     NOTE: Always use copy_in API to touch user memory
-         *
          *     Arguments are pointers in registers into user space
          *       - a0: null-terminated char* pointer to program name in user space
          *       - a1: null-terminated char** pointer to argument vector in user space
          *     Need to copy this information somewhere into the new address space
-         *
-         *     There is a maximum number of arguments
-         *     - Null terminator must occur after an appropriate number of arguments
-         *     - It is an error if null terminator is not encountered within the appropriate number of args
-         *       - If there is no null-terminator, the addresses received are probably garbage
-         *
-         * 7. Clean up old address space
-         *     as_destroy
-         *     NOT TOO SOON: must come back to the old address space if exec fails
-         *
-         * 8. Warp to user mode
-         *     - enter_new_process
          */
 
-        (void) program;
-        (void) *args;
+        /* TODO: */
 
-        /* clean up and return */
+        /*
+         * 7. Clean up old address space
+         */
+
+        as_destroy(old_as); /* the point of no return...  */
+
+        /*
+         * 8. Warp to user mode
+         */
+
+        /* clean up before doing so */
         kfree(*kargs);
         kfree(kargs);
 	vfs_close(v);
-        return 0;
+
+        as_activate();
+	enter_new_process(0 /*argc*/, NULL /*userspace addr of argv*/,
+			  NULL /*userspace addr of environment*/,
+			  stackptr, entrypoint);
+
+	/* enter_new_process does not return. */
+	panic("enter_new_process returned\n");
+        return EINVAL;
 
 err:
         kfree(*kargs);
         kfree(kargs);
 	vfs_close(v); /* if never opened? */
 
-        /* clean up address */
-        as_deactivate();
+        /* clean up address space */
         proc_setas(old_as);
-        as_destroy(new_as); /* if never created? */
+        as_destroy(new_as); /* DUMBVM handles the case where new_as is NULL */
         as_activate();
         return err;
 }
