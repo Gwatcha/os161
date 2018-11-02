@@ -327,8 +327,8 @@ err:
 int
 sys_fork(pid_t* retval) {
 
-        /* const proc* curproc = curproc; */
-        struct proc* newproc = kmalloc(sizeof(struct proc));
+        /* Create child process with proc_create */
+        struct proc* newproc = proc_create_runprogram(curproc->p_name);
 
         /* Copy the address space */
         as_copy(curproc->p_addrspace, &newproc->p_addrspace);
