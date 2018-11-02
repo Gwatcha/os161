@@ -357,7 +357,7 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
         memcpy(tf_copy, trapframe, sizeof(struct trapframe));
 
         /* Fork the child process */
-        thread_fork("child", newproc, &enter_forked_process_wrapper, tfcopy, 0);
+        thread_fork("child", newproc, &enter_forked_process_wrapper, tf_copy, 0);
 
         *retval = newproc->pid;
         return 0;
