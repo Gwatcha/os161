@@ -351,7 +351,7 @@ sys_fork(pid_t* retval) {
 
 int
 sys_getpid(pid_t* retval) {
-        (void) retval;
+        *retval = curproc->pid;
         return 0;
 }
 
