@@ -333,8 +333,8 @@ sys_fork(pid_t* retval) {
         /* Copy the address space */
         as_copy(curproc->p_addrspace, &newproc->p_addrspace);
 
-
-        /* TODO: Copy the file table */
+        /* Copy the file table */
+        file_table_copy(&curproc->p_file_table, &newproc->p_file_table);
 
         /* TODO: Copy threads */
 

@@ -55,6 +55,8 @@ struct file_table_entry* file_table_entry_create(int open_flags, struct vnode* v
 
 void file_table_entry_destroy(struct file_table_entry* fte);
 
+void file_table_copy(file_table* file_table_in, file_table* file_table_out);
+
 /*
  * Process structure.
  */

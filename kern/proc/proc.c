@@ -85,6 +85,12 @@ file_table_entry_destroy(struct file_table_entry* fte) {
 	kfree(fte);
 }
 
+void
+file_table_copy(file_table* file_table_in, file_table* file_table_out) {
+        (void)file_table_in;
+        (void)file_table_out;
+}
+
 /* file_table_entry* */
 static
 int
