@@ -23,10 +23,12 @@
 #include <current.h>
 
 #include <limits.h>
+#include <kern/limits.h>
 
 #include <kern/errno.h>
 #include <kern/fcntl.h>
 
+#include <synch.h>
 #include <addrspace.h>
 
 /* ------------------------------------------------------------------------- */
@@ -344,17 +346,86 @@ enter_forked_process_wrapper(void* data1, unsigned long data2) {
         enter_forked_process((struct trapframe*)data1);
 }
 
-/* TEMP HACK: static pid counter */
-static int pidcount = 0;
+/* enum process_status { */
+/*         is_alive, */
+/*         has_exited, */
+/* } */
+
+struct process_table_entry {
+        struct cv* pte_waitpid_cv;
+        struct array pte_child_pids;
+        pid_t pte_parent_pid;
+        bool pte_has_exited;
+};
+
+static
+struct process_table_entry*
+process_table_entry_create(pid_t pid, pid_t parent_pid) {
+
+        struct process_table_entry* pte = kmalloc(sizeof(struct process_table_entry));
+
+        /* TODO: Better name for the CV */
+        (void)pid;
+        pte->pte_waitpid_cv = cv_create("");
+
+        array_init(&pte->pte_child_pids);
+
+        pte->pte_parent_pid = parent_pid;
+        pte->pte_has_exited = false;
+
+        return pte;
+}
+
+static
+void
+process_table_entry_destroy(struct process_table_entry* pte) {
+        cv_destroy(pte->pte_waitpid_cv);
+        kfree(pte);
+}
+
+typedef struct process_table_entry* process_table[__PID_MAX];
+
+static process_table proc_table = { NULL };
+
 
 int
 sys_fork(pid_t* retval, struct trapframe* trapframe) {
 
+       /* Errors:
+        * EMPROC  The current user already has too many processes.
+        * ENPROC  There are already too many processes on the system.
+        * ENOMEM  Sufficient virtual memory for the new process was not available.
+        */
+
         /* Create child process with proc_create */
         struct proc* newproc = proc_create_runprogram(curproc->p_name);
 
-        /* TEMP HACK: static pid counter */
-        newproc->pid = ++pidcount;
+        const pid_t parent_pid = curproc->pid;
+
+        /* Find an unused pid for the child */
+        for (pid_t pid = 0; ; ++pid) {
+
+                if (pid >= __PID_MAX) {
+                        return ENPROC;
+                }
+
+                if (proc_table[pid] == NULL) {
+                        /* TODO: Lock */
+                        newproc->pid = pid;
+                        proc_table[pid] = process_table_entry_create(pid, parent_pid);
+                        break;
+                }
+        }
+
+        /* Set the child's parent pid */
+        proc_table[newproc->pid]->pte_parent_pid = parent_pid;
+
+        /* Add the child's pid to the parent's list of children */
+        int error = array_add(&proc_table[curproc->pid]->pte_child_pids,
+                              (void*)newproc->pid, NULL);
+        if (error) {
+                return error;
+        }
 
         /* Copy the address space */
         as_copy(curproc->p_addrspace, &newproc->p_addrspace);
@@ -385,6 +456,14 @@ sys_getpid(pid_t* retval) {
 
 int
 sys_waitpid(pid_t* retval, pid_t pid, int *status, int options) {
+
+       /* Errors:
+        * EINVAL  The options argument requested invalid or unsupported options.
+        * ECHILD  The pid argument named a process that was not a child of the current process.
+        * ESRCH   The pid argument named a nonexistent process.
+        * EFAULT  The status argument was an invalid pointer.
+        */
+
         (void) retval;
         (void) pid;
         (void) *status;
@@ -394,5 +473,43 @@ sys_waitpid(pid_t* retval, pid_t pid, int *status, int options) {
 
 void
 sys__exit() {
+
+        struct process_table_entry* p_table_entry = proc_table[curproc->pid];
+
+        struct array* child_pids = &p_table_entry->pte_child_pids;
+
+        /* Clean up proc_table_entry of each child that has already exited */
+        unsigned num_children = child_pids->num;
+        for (unsigned i = 0; i < num_children; ++i) {
+
+                pid_t child_pid = (pid_t)array_get(child_pids, i);
+
+                struct process_table_entry* child_p_table_entry = proc_table[child_pid];
+
+                /* child's proc table entry should exist until its parent exits */
+                KASSERT(child_p_table_entry != NULL);
+
+                /* this process should be the parent of its children */
+                KASSERT(child_p_table_entry->pte_parent_pid == curproc->pid);
+
+                if (child_p_table_entry->pte_has_exited) {
+                        process_table_entry_destroy(child_p_table_entry);
+                        proc_table[child_pid] = NULL;
+                }
+        }
+
+        /* If parent has already exited, can destroy entry */
+
+
+
+        /* If parent has not exited, cannot destroy entry */
+
+
+        /* pid_t pid = curproc->pid; */
+
+        /* KASSERT(process_table[pid] != NULL); */
+
+        /* process_table[pid]->has_exited = true; */
+
         thread_exit();
 }
