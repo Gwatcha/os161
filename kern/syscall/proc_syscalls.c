@@ -547,18 +547,10 @@ sys__exit(int exitcode) {
 
         const pid_t parent_pid = p_table_entry->pte_parent_pid;
 
-        /* const struct proc_table_enry* parent_proc_table_entry =  */
-
-        /* const bool parent_still_exists = process_has_child(proc_table[parent_pid], curpid); */
-
-        /* const bool parent_has_exited = proc_table[parent_pid]->pte_has_exited; */
-
         if (proc_table[parent_pid] == NULL ||
             proc_table[parent_pid]->pte_has_exited ||
             !process_has_child(proc_table[parent_pid], curpid)) {
 
-
-            /* !parent_still_exists || parent_has_exited) { */
                 /* If parent has already exited, can destroy this entry */
 
                 process_table_entry_destroy(p_table_entry);
