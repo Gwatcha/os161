@@ -196,6 +196,8 @@ copyinstr_array(char ** user_ptr, char ** kbuff, int maxcopy) {
                 KASSERT(kbuff[i] == temp);
         }
 
+        kfree(kbuff);
+        kfree(kstrings);
         return 0;
 }
 
