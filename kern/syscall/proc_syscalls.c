@@ -480,13 +480,12 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
         struct trapframe* tf_copy = kmalloc(sizeof(struct trapframe));
         memcpy(tf_copy, trapframe, sizeof(struct trapframe));
 
-        lock_release(pid_locks[curpid]);
-
         /* Fork the child process */
         thread_fork("child", child_proc, &enter_forked_process_wrapper, tf_copy, 0);
 
         *retval = child_proc->p_pid;
 
+        lock_release(pid_locks[curpid]);
 
         return 0;
 }
