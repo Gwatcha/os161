@@ -460,6 +460,8 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
         /* Set the child's parent pid */
         proc_table[child_proc->p_pid]->pte_parent_pid = curpid;
 
+        KASSERT(proc_table[curpid] != NULL);
+
         /* Add the child's pid to the parent's list of children */
         int error = array_add(&proc_table[curpid]->pte_child_pids,
                               (void*)child_proc->p_pid, NULL);
