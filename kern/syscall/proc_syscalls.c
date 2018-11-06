@@ -382,6 +382,10 @@ static
 void
 process_table_entry_destroy(struct process_table_entry* pte) {
         cv_destroy(pte->pte_waitpid_cv);
+
+        array_setsize(&pte->pte_child_pids, 0);
+        array_cleanup(&pte->pte_child_pids);
+
         kfree(pte);
 }
 
