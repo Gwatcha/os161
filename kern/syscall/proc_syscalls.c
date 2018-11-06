@@ -393,15 +393,18 @@ typedef struct process_table_entry* process_table[__PID_MAX];
 
 static process_table proc_table = { NULL };
 
-/* TEMP HACK */
-static struct lock* big_lock;
+static struct lock* pid_locks[__PID_MAX];
 
 void
 create_first_proc_table_entry() {
         proc_table[1] = process_table_entry_create(1, 0);
 
-        /* TEMP HACK */
-        big_lock = lock_create("asdf");
+        for (pid_t i = 0; i < __PID_MAX; ++i) {
+
+                char buf[64];
+                snprintf(buf, sizeof(buf), "pid_lock_%d", i);
+                pid_locks[i] = lock_create(buf);
+        }
 }
 
 static
@@ -429,18 +432,18 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
          * ENOMEM  Sufficient virtual memory for the new process was not available.
          */
 
-        lock_acquire(big_lock);
+        const pid_t curpid = curproc->p_pid;
+
+        lock_acquire(pid_locks[curpid]);
 
         /* Create child process with proc_create */
         struct proc* child_proc = proc_create_runprogram(curproc->p_name);
-
-        const pid_t curpid = curproc->p_pid;
 
         /* Find an unused pid for the child */
         for (pid_t pid = 1; ; ++pid) {
 
                 if (pid >= __PID_MAX) {
-                        lock_release(big_lock);
+                        lock_release(pid_locks[curpid]);
                         return ENPROC;
                 }
 
@@ -459,7 +462,7 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
         int error = array_add(&proc_table[curproc->p_pid]->pte_child_pids,
                               (void*)child_proc->p_pid, NULL);
         if (error) {
-                lock_release(big_lock);
+                lock_release(pid_locks[curpid]);
                 return error;
         }
 
@@ -477,12 +480,13 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
         struct trapframe* tf_copy = kmalloc(sizeof(struct trapframe));
         memcpy(tf_copy, trapframe, sizeof(struct trapframe));
 
+        lock_release(pid_locks[curpid]);
+
         /* Fork the child process */
         thread_fork("child", child_proc, &enter_forked_process_wrapper, tf_copy, 0);
 
         *retval = child_proc->p_pid;
 
-        lock_release(big_lock);
 
         return 0;
 }
@@ -515,9 +519,10 @@ sys_waitpid(pid_t* retval, pid_t pid, int *status, int options) {
 void
 sys__exit(int exitcode) {
 
-        lock_acquire(big_lock);
 
         const pid_t curpid = curproc->p_pid;
+
+        lock_acquire(pid_locks[curpid]);
 
         struct process_table_entry* p_table_entry = proc_table[curproc->p_pid];
 
@@ -566,7 +571,7 @@ sys__exit(int exitcode) {
                 /* cv_broadcast(p_table_entry->pte_waitpid_cv, p_table_entry->pte_lock); */
         }
 
-        lock_release(big_lock);
+        lock_release(pid_locks[curpid]);
 
         (void)exitcode;
         thread_exit();
