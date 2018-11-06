@@ -409,8 +409,6 @@ bool
 process_has_child(struct process_table_entry* parent, pid_t child_pid) {
         /* TODO: Maybe lock the parent */
 
-        /* kprintf("process_has_child(%p, ...)\n", parent); */
-
         struct array* child_pids = &parent->pte_child_pids;
 
         for (unsigned i = 0; i < child_pids->num; ++i) {
@@ -457,12 +455,6 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
         /* Set the child's parent pid */
         proc_table[newproc->p_pid]->pte_parent_pid = parent_pid;
 
-        /* kprintf("Fork %d -> %d\n", parent_pid, newproc->p_pid); */
-        /* kprintf("   proc_table[%d]                 = %p\n", parent_pid, proc_table[parent_pid]); */
-        /* kprintf("  &proc_table[%d]->pte_child_pids = %p\n", parent_pid, &proc_table[parent_pid]->pte_child_pids); */
-
-        /* kprintf("Proc table entry of id %d is %p\n", curproc->pid, proc_table[curproc->pid]); */
-
         /* Add the child's pid to the parent's list of children */
         int error = array_add(&proc_table[curproc->p_pid]->pte_child_pids,
                               (void*)newproc->p_pid, NULL);
@@ -489,7 +481,6 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
         thread_fork("child", newproc, &enter_forked_process_wrapper, tf_copy, 0);
 
         *retval = newproc->p_pid;
-        /* kprintf("   Woohoot!\n"); */
 
         lock_release(big_lock);
 
@@ -525,8 +516,6 @@ void
 sys__exit(int exitcode) {
 
         lock_acquire(big_lock);
-
-        /* kprintf("begin exit\n"); */
 
         const pid_t curpid = curproc->p_pid;
 
@@ -584,8 +573,6 @@ sys__exit(int exitcode) {
                 /* Signal that we have exited in case parent is presently waiting */
                 /* cv_broadcast(p_table_entry->pte_waitpid_cv, p_table_entry->pte_lock); */
         }
-
-        /* kprintf("   end exit\n"); */
 
         lock_release(big_lock);
 
