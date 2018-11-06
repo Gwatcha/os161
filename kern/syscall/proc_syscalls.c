@@ -541,6 +541,8 @@ sys__exit(int exitcode) {
 
                 pid_t child_pid = (pid_t)array_get(child_pids, i);
 
+                lock_acquire(pid_locks[child_pid]);
+
                 struct process_table_entry* child_p_table_entry = proc_table[child_pid];
 
                 /* child's proc table entry should exist until its parent exits */
@@ -553,8 +555,9 @@ sys__exit(int exitcode) {
                         process_table_entry_destroy(child_p_table_entry);
                         proc_table[child_pid] = NULL;
                 }
-        }
 
+                lock_release(pid_locks[child_pid]);
+        }
 
         if (proc_table[parent_pid] == NULL ||
             proc_table[parent_pid]->pte_has_exited ||
