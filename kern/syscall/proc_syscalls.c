@@ -434,7 +434,7 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
         /* Create child process with proc_create */
         struct proc* newproc = proc_create_runprogram(curproc->p_name);
 
-        const pid_t parent_pid = curproc->p_pid;
+        const pid_t curpid = curproc->p_pid;
 
         /* Find an unused pid for the child */
         for (pid_t pid = 1; ; ++pid) {
@@ -447,13 +447,13 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
                 if (proc_table[pid] == NULL) {
                         /* TODO: Lock */
                         newproc->p_pid = pid;
-                        proc_table[pid] = process_table_entry_create(pid, parent_pid);
+                        proc_table[pid] = process_table_entry_create(pid, curpid);
                         break;
                 }
         }
 
         /* Set the child's parent pid */
-        proc_table[newproc->p_pid]->pte_parent_pid = parent_pid;
+        proc_table[newproc->p_pid]->pte_parent_pid = curpid;
 
         /* Add the child's pid to the parent's list of children */
         int error = array_add(&proc_table[curproc->p_pid]->pte_child_pids,
