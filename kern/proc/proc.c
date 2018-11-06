@@ -52,6 +52,8 @@
 #include <kern/unistd.h>
 #include <kern/fcntl.h>
 
+#include <syscall.h>
+
 /*
  * The process for the kernel; this holds all the kernel-only threads.
  */
@@ -270,6 +272,8 @@ proc_bootstrap(void)
 	if (kproc == NULL) {
 		panic("proc_create for kproc failed\n");
 	}
+        kproc->p_pid = 1;
+        create_first_proc_table_entry();
 }
 
 /*

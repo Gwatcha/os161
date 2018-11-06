@@ -87,7 +87,9 @@ int sys___getcwd(int* retval, char* buf, size_t buflen);
 /*
  * Process related syscalls (see in proc_syscalls.c)
  */
-int sys_execv(const char *program, char **args); 
+void create_first_proc_table_entry(void);
+
+int sys_execv(const char *program, char **args);
 
 int sys_fork(pid_t* retval, struct trapframe* trapframe);
 

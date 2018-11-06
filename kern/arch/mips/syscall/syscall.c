@@ -37,6 +37,9 @@
 #include <syscall.h>
 #include <copyinout.h>
 
+#include <proc.h>
+#include <addrspace.h>
+
 
 /*
  * System call dispatcher.
