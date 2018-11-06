@@ -251,6 +251,7 @@ enter_forked_process(struct trapframe *copy_of_parent_tf)
 
         /* kprintf("Fixed up trap frame!"); */
         /* while(true); */
+        as_activate();
 
         mips_usermode(&child_tf);
 }
