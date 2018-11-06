@@ -400,7 +400,7 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
         /* Create child process with proc_create */
         struct proc* newproc = proc_create_runprogram(curproc->p_name);
 
-        const pid_t parent_pid = curproc->pid;
+        const pid_t parent_pid = curproc->p_pid;
 
         /* Find an unused pid for the child */
         for (pid_t pid = 0; ; ++pid) {
@@ -411,7 +411,7 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
 
                 if (proc_table[pid] == NULL) {
                         /* TODO: Lock */
-                        newproc->pid = pid;
+                        newproc->p_pid = pid;
                         proc_table[pid] = process_table_entry_create(pid, parent_pid);
                         break;
                 }
@@ -421,8 +421,8 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
         proc_table[newproc->pid]->pte_parent_pid = parent_pid;
 
         /* Add the child's pid to the parent's list of children */
-        int error = array_add(&proc_table[curproc->pid]->pte_child_pids,
-                              (void*)newproc->pid, NULL);
+        int error = array_add(&proc_table[curproc->p_pid]->pte_child_pids,
+                              (void*)newproc->p_pid, NULL);
         if (error) {
                 return error;
         }
@@ -444,13 +444,13 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
         /* Fork the child process */
         thread_fork("child", newproc, &enter_forked_process_wrapper, tf_copy, 0);
 
-        *retval = newproc->pid;
+        *retval = newproc->p_pid;
         return 0;
 }
 
 int
 sys_getpid(pid_t* retval) {
-        *retval = curproc->pid;
+        *retval = curproc->p_pid;
         return 0;
 }
 
@@ -474,7 +474,7 @@ sys_waitpid(pid_t* retval, pid_t pid, int *status, int options) {
 void
 sys__exit(int exitcode) {
 
-        struct process_table_entry* p_table_entry = proc_table[curproc->pid];
+        const pid_t curpid = curproc->p_pid;
 
         struct array* child_pids = &p_table_entry->pte_child_pids;
 
@@ -490,7 +490,7 @@ sys__exit(int exitcode) {
                 KASSERT(child_p_table_entry != NULL);
 
                 /* this process should be the parent of its children */
-                KASSERT(child_p_table_entry->pte_parent_pid == curproc->pid);
+                KASSERT(child_p_table_entry->pte_parent_pid == curpid);
 
                 if (child_p_table_entry->pte_has_exited) {
                         process_table_entry_destroy(child_p_table_entry);

@@ -155,6 +155,9 @@ proc_create(const char *name)
                 proc->p_file_table[fd] = NULL;
         }
 
+        /* Initialize the pid */
+        proc->p_pid = 1;
+
         /* TODO Open stdin, stdout, and stderr  */
         /* open_console(proc, STDIN_FILENO, O_RDONLY); */
         /* open_console(proc, STDOUT_FILENO, O_WRONLY); */
@@ -306,9 +309,6 @@ proc_create_runprogram(const char *name)
         open_console(newproc, STDIN_FILENO, O_RDONLY);
         open_console(newproc, STDOUT_FILENO, O_WRONLY);
         open_console(newproc, STDERR_FILENO, O_WRONLY);
-
-        /* TEMP HACK: assign 1 as pid */
-        newproc->pid = 1;
 
 	return newproc;
 }
