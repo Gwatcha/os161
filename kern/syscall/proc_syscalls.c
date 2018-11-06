@@ -449,11 +449,22 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
                         return ENPROC;
                 }
 
+                if (pid == curpid) {
+                        /* Avoid deadlocking on our own lock */
+                        continue;
+                }
+
+
                 if (proc_table[pid] == NULL) {
-                        /* TODO: Lock */
-                        child_proc->p_pid = pid;
-                        proc_table[pid] = process_table_entry_create(pid, curpid);
-                        break;
+                        lock_acquire(pid_locks[pid]);
+                        if (proc_table[pid] == NULL) {
+
+                                child_proc->p_pid = pid;
+                                proc_table[pid] = process_table_entry_create(pid, curpid);
+                                lock_release(pid_locks[pid]);
+                                break;
+                        }
+                        lock_release(pid_locks[pid]);
                 }
         }
 
