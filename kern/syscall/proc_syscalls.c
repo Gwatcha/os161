@@ -472,7 +472,7 @@ sys_waitpid(pid_t* retval, pid_t pid, int *status, int options) {
 }
 
 void
-sys__exit() {
+sys__exit(int exitcode) {
 
         struct process_table_entry* p_table_entry = proc_table[curproc->pid];
 
@@ -511,5 +511,6 @@ sys__exit() {
 
         /* process_table[pid]->has_exited = true; */
 
+        (void)exitcode;
         thread_exit();
 }
