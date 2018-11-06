@@ -523,11 +523,15 @@ sys__exit(int exitcode) {
 
         const pid_t curpid = curproc->p_pid;
 
-        lock_acquire(pid_locks[curpid]);
-
         struct process_table_entry* p_table_entry = proc_table[curproc->p_pid];
 
         KASSERT(p_table_entry != NULL);
+
+        const pid_t parent_pid = p_table_entry->pte_parent_pid;
+
+        lock_acquire(pid_locks[parent_pid]);
+
+        lock_acquire(pid_locks[curpid]);
 
         struct array* child_pids = &p_table_entry->pte_child_pids;
 
@@ -551,7 +555,6 @@ sys__exit(int exitcode) {
                 }
         }
 
-        const pid_t parent_pid = p_table_entry->pte_parent_pid;
 
         if (proc_table[parent_pid] == NULL ||
             proc_table[parent_pid]->pte_has_exited ||
@@ -573,6 +576,8 @@ sys__exit(int exitcode) {
         }
 
         lock_release(pid_locks[curpid]);
+
+        lock_release(pid_locks[parent_pid]);
 
         (void)exitcode;
         thread_exit();
