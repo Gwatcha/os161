@@ -432,7 +432,7 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
         lock_acquire(big_lock);
 
         /* Create child process with proc_create */
-        struct proc* newproc = proc_create_runprogram(curproc->p_name);
+        struct proc* child_proc = proc_create_runprogram(curproc->p_name);
 
         const pid_t curpid = curproc->p_pid;
 
@@ -446,28 +446,28 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
 
                 if (proc_table[pid] == NULL) {
                         /* TODO: Lock */
-                        newproc->p_pid = pid;
+                        child_proc->p_pid = pid;
                         proc_table[pid] = process_table_entry_create(pid, curpid);
                         break;
                 }
         }
 
         /* Set the child's parent pid */
-        proc_table[newproc->p_pid]->pte_parent_pid = curpid;
+        proc_table[child_proc->p_pid]->pte_parent_pid = curpid;
 
         /* Add the child's pid to the parent's list of children */
         int error = array_add(&proc_table[curproc->p_pid]->pte_child_pids,
-                              (void*)newproc->p_pid, NULL);
+                              (void*)child_proc->p_pid, NULL);
         if (error) {
                 lock_release(big_lock);
                 return error;
         }
 
         /* Copy the address space */
-        as_copy(curproc->p_addrspace, &newproc->p_addrspace);
+        as_copy(curproc->p_addrspace, &child_proc->p_addrspace);
 
         /* Copy the file table */
-        file_table_copy(&curproc->p_file_table, &newproc->p_file_table);
+        file_table_copy(&curproc->p_file_table, &child_proc->p_file_table);
 
         /* TODO: Copy threads */
 
@@ -478,9 +478,9 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
         memcpy(tf_copy, trapframe, sizeof(struct trapframe));
 
         /* Fork the child process */
-        thread_fork("child", newproc, &enter_forked_process_wrapper, tf_copy, 0);
+        thread_fork("child", child_proc, &enter_forked_process_wrapper, tf_copy, 0);
 
-        *retval = newproc->p_pid;
+        *retval = child_proc->p_pid;
 
         lock_release(big_lock);
 
