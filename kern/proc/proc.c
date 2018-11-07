@@ -156,7 +156,7 @@ proc_create(const char *name, pid_t pid)
         }
 
         /* Initialize the pid */
-        KASSERT(pid != INVALID_PID);
+        KASSERT(proc_table_entry_exists(pid));
         proc->p_pid = pid;
         /* reserve_pid(parent_pid); */
 
