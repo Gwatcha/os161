@@ -54,7 +54,7 @@ proc_table_entry_destroy(struct proc_table_entry* pte) {
 void
 proc_table_init() {
         /* TEMP HACK */
-	proc_table[1] = process_table_entry_create(1, 0);
+	p_table[1] = proc_table_entry_create(1, 0);
 
         for (pid_t i = 0; i < __PID_MAX; ++i) {
                 char buf[64];
