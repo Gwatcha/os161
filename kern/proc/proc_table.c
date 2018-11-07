@@ -20,7 +20,7 @@ typedef struct proc_table_entry* proc_table[__PID_MAX];
 
 static proc_table p_table = { NULL };
 
-static struct lock* pid_locks[__PID_MAX];
+static struct lock* pid_locks[__PID_MAX] = { NULL };
 
 static
 struct proc_table_entry*
