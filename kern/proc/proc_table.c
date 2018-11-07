@@ -34,7 +34,7 @@ proc_table_entry_create(pid_t pid, const pid_t* parent_pid) {
 
 	array_init(&pte->pte_child_pids);
 
-	pte->pte_parent_pid = parent_pid != NULL ? *parent_pid : -1;
+	pte->pte_parent_pid = parent_pid != NULL ? *parent_pid : INVALID_PID;
 	pte->pte_has_exited = false;
 
 	return pte;
