@@ -20,6 +20,7 @@
 #include <mips/trapframe.h>
 
 #include <proc.h>
+#include <proc_table.h>
 #include <current.h>
 
 #include <limits.h>
@@ -211,110 +212,6 @@ enter_forked_process_wrapper(void* data1, unsigned long data2) {
 	enter_forked_process((struct trapframe*)data1);
 }
 
-/* enum process_status { */
-/*         is_alive, */
-/*         has_exited, */
-/* } */
-
-struct process_table_entry {
-	struct cv* pte_waitpid_cv;
-	struct array pte_child_pids;
-	pid_t pte_parent_pid;
-	bool pte_has_exited;
-	int pte_exit_status;
-	/* int pte_refcount; */
-};
-
-static
-struct process_table_entry*
-process_table_entry_create(pid_t pid, const pid_t* parent_pid) {
-
-	struct process_table_entry* pte = kmalloc(sizeof(struct process_table_entry));
-
-	/* TODO: Better name for the CV */
-	(void)pid;
-	pte->pte_waitpid_cv = cv_create("");
-
-	array_init(&pte->pte_child_pids);
-
-	pte->pte_parent_pid = parent_pid != NULL ? *parent_pid : -1;
-	pte->pte_has_exited = false;
-
-	return pte;
-}
-
-static
-void
-process_table_entry_destroy(struct process_table_entry* pte) {
-	cv_destroy(pte->pte_waitpid_cv); /* FIXME: kpanic!  */
-
-	array_setsize(&pte->pte_child_pids, 0);
-	array_cleanup(&pte->pte_child_pids);
-
-	kfree(pte);
-}
-
-typedef struct process_table_entry* process_table[__PID_MAX];
-
-static process_table proc_table = { NULL };
-
-static struct lock* pid_locks[__PID_MAX];
-
-void
-create_first_proc_table_entry() {
-	proc_table[1] = process_table_entry_create(1, 0);
-
-        for (pid_t i = 0; i < __PID_MAX; ++i) {
-
-                char buf[64];
-                snprintf(buf, sizeof(buf), "pid_lock_%d", i);
-                pid_locks[i] = lock_create(buf);
-        }
-}
-
-static
-bool
-process_has_child(struct process_table_entry* parent, pid_t child_pid) {
-	/* TODO: Maybe lock the parent */
-
-        struct array* child_pids = &parent->pte_child_pids;
-
-	for (unsigned i = 0; i < child_pids->num; ++i) {
-		if ((pid_t)array_get(child_pids, i) == child_pid) {
-			return true;
-		}
-	}
-	return false;
-}
-
-/* Returns -1 on error */
-static
-pid_t
-reserve_pid(const pid_t* parent_pid /* may be NULL */) {
-
-        /* Find an unused pid */
-	for (pid_t pid = 1; pid < __PID_MAX; ++pid) {
-
-                if (parent_pid != NULL && pid == *parent_pid) {
-                        /* Avoid deadlocking on our own lock */
-                        continue;
-                }
-
-                if (proc_table[pid] == NULL) {
-                        lock_acquire(pid_locks[pid]);
-                        if (proc_table[pid] == NULL) {
-
-                                /* child_proc->p_pid = pid; */
-                                proc_table[pid] = process_table_entry_create(pid, parent_pid);
-                                lock_release(pid_locks[pid]);
-                                return pid;
-                        }
-                        lock_release(pid_locks[pid]);
-                }
-        }
-        return -1;
-}
-
 /* Private Utility Functions */
 /* ------------------------------------------------------------------------- */
 /* System calls */
@@ -478,29 +375,26 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
 
         const pid_t curpid = curproc->p_pid;
 
-        lock_acquire(pid_locks[curpid]);
+        pid_lock_acquire(curpid);
 
         /* Create child process with proc_create */
         struct proc* child_proc = proc_create_runprogram(curproc->p_name);
 
 	/* Find an unused pid for the child */
-
         const pid_t child_pid = reserve_pid(&curpid);
-        if (child_pid == -1) {
-                lock_release(pid_locks[curpid]);
+        if (child_pid == INVALID_PID) {
+                pid_lock_release(curpid);
                 return ENPROC;
         }
 
-        /* Set the child's parent pid */
-        proc_table[child_proc->p_pid]->pte_parent_pid = curpid;
+        child_proc->p_pid = child_pid;
 
-        KASSERT(proc_table[curpid] != NULL);
+        KASSERT(proc_table_entry_exists(curpid));
 
         /* Add the child's pid to the parent's list of children */
-        int error = array_add(&proc_table[curpid]->pte_child_pids,
-                              (void*)child_proc->p_pid, NULL);
+        int error = proc_add_child(curpid, child_pid);
         if (error) {
-                lock_release(pid_locks[curpid]);
+                pid_lock_release(curpid);
                 return error;
         }
 
@@ -523,7 +417,7 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
 
         *retval = child_proc->p_pid;
 
-        lock_release(pid_locks[curpid]);
+        pid_lock_release(curpid);
 
 	return 0;
 }
@@ -556,20 +450,16 @@ sys_waitpid(pid_t* retval, pid_t pid, int *status, int options) {
 void
 sys__exit(int exitcode) {
 
-
 	const pid_t curpid = curproc->p_pid;
 
-	struct process_table_entry* p_table_entry = proc_table[curproc->p_pid];
+	KASSERT(proc_table_entry_exists(curpid));
 
-	KASSERT(p_table_entry != NULL);
+        const pid_t parent_pid = proc_get_parent(curpid);
 
-        const pid_t parent_pid = p_table_entry->pte_parent_pid;
+        pid_lock_acquire(parent_pid);
+        pid_lock_acquire(curpid);
 
-        lock_acquire(pid_locks[parent_pid]);
-
-        lock_acquire(pid_locks[curpid]);
-
-        struct array* child_pids = &p_table_entry->pte_child_pids;
+        struct array* child_pids = proc_get_children(curpid);
 
 	/* Clean up proc_table_entry of each child that has already exited */
 	unsigned num_children = child_pids->num;
@@ -577,47 +467,35 @@ sys__exit(int exitcode) {
 
 		pid_t child_pid = (pid_t)array_get(child_pids, i);
 
-                lock_acquire(pid_locks[child_pid]);
-
-                struct process_table_entry* child_p_table_entry = proc_table[child_pid];
+                pid_lock_acquire(child_pid);
 
 		/* child's proc table entry should exist until its parent exits */
-		KASSERT(child_p_table_entry != NULL);
+                KASSERT(proc_table_entry_exists(child_pid));
 
 		/* this process should be the parent of its children */
-		KASSERT(child_p_table_entry->pte_parent_pid == curpid);
+                KASSERT(proc_get_parent(child_pid) == curpid);
 
-                if (child_p_table_entry->pte_has_exited) {
-                        process_table_entry_destroy(child_p_table_entry);
-                        proc_table[child_pid] = NULL;
+                if (proc_has_exited(child_pid)) {
+
+                        remove_proc_table_entry(child_pid);
                 }
 
-                lock_release(pid_locks[child_pid]);
+                pid_lock_release(child_pid);
         }
 
-	if (proc_table[parent_pid] == NULL ||
-			proc_table[parent_pid]->pte_has_exited ||
-			!process_has_child(proc_table[parent_pid], curpid)) {
+	if (proc_table_entry_exists(parent_pid) &&
+            !proc_has_exited(parent_pid) &&
+            proc_has_child(parent_pid, curpid)) {
 
-                /* If parent has already exited, can destroy this entry */
-
-		process_table_entry_destroy(p_table_entry); /* FIXME: kernel
-							       panics here! */
-		proc_table[curpid] = NULL;
-	}
-	else {
 		/* If parent has not exited, cannot destroy this entry */
+                proc_exit(curpid, exitcode);
+        }
+        else {
+		remove_proc_table_entry(curpid); /* FIXME: kernel panics here! */
+        }
 
-		p_table_entry->pte_has_exited = true;
-		p_table_entry->pte_exit_status = exitcode;
-
-		/* Signal that we have exited in case parent is presently waiting */
-		/* cv_broadcast(p_table_entry->pte_waitpid_cv, p_table_entry->pte_lock); */
-	}
-
-        lock_release(pid_locks[curpid]);
-
-        lock_release(pid_locks[parent_pid]);
+        pid_lock_release(curpid);
+        pid_lock_release(parent_pid);
 
 	(void)exitcode;
 	thread_exit();

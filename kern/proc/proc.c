@@ -45,14 +45,13 @@
 #include <types.h>
 #include <spl.h>
 #include <proc.h>
+#include <proc_table.h>
 #include <current.h>
 #include <addrspace.h>
 #include <vnode.h>
 #include <vfs.h>
 #include <kern/unistd.h>
 #include <kern/fcntl.h>
-
-#include <syscall.h>
 
 /*
  * The process for the kernel; this holds all the kernel-only threads.
@@ -158,7 +157,7 @@ proc_create(const char *name)
         }
 
         /* Initialize the pid */
-        proc->p_pid = 1;
+        proc->p_pid = INVALID_PID;
 
         /* TODO Open stdin, stdout, and stderr  */
         /* open_console(proc, STDIN_FILENO, O_RDONLY); */
@@ -273,7 +272,7 @@ proc_bootstrap(void)
 		panic("proc_create for kproc failed\n");
 	}
         kproc->p_pid = 1;
-        create_first_proc_table_entry();
+        proc_table_init();
 }
 
 /*
