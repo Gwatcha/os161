@@ -85,13 +85,13 @@ void remove_proc_table_entry(pid_t pid) {
 }
 
 bool
-proc_has_child(pid_t parent_pid, pid_t child_pid) {
+proc_has_child(pid_t parent, pid_t child) {
 	/* TODO: Maybe lock the parent */
 
-        const struct array* child_pids = &p_table[parent_pid]->pte_child_pids;
+        const struct array* child_pids = &p_table[parent]->pte_child_pids;
 
 	for (unsigned i = 0; i < child_pids->num; ++i) {
-		if ((pid_t)array_get(child_pids, i) == child_pid) {
+		if ((pid_t)array_get(child_pids, i) == child) {
 			return true;
 		}
 	}
