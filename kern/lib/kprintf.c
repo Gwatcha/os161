@@ -206,3 +206,17 @@ badassert(const char *expr, const char *file, int line, const char *func)
 	panic("Assertion failed: %s, at %s:%d (%s)\n",
 	      expr, file, line, func);
 }
+
+__DEAD void badassert_msg(const char *expr, const char *file,
+                          int line, const char *func, const char* format, ...) {
+	va_list ap;
+
+        va_start(ap, format);
+        char msg[256];
+        vsnprintf(msg, sizeof(msg), format, ap);
+        va_end(ap);
+
+	panic("Assertion failed: %s, at %s:%d (%s) - %s\n",
+	      expr, file, line, func, msg);
+}
+

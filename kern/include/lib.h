@@ -66,6 +66,13 @@
 	((expr) ? (void)0 : badassert(#expr, __FILE__, __LINE__, __func__))
 #endif
 
+#if OPT_NOASSERTS
+#define KASSERTM(expr, format, ...) ((void)(expr) (void)(msg))
+#else
+#define KASSERTM(expr, format, ...)                                         \
+	((expr) ? (void)0 : badassert_msg(#expr, __FILE__, __LINE__, __func__, format, __VA_ARGS__))
+#endif
+
 #if 1 /* no debug asserts */
 #define DEBUGASSERT(expr) ((void)(expr))
 #else
@@ -182,6 +189,9 @@ int kprintf(const char *format, ...) __PF(1,2);
 __DEAD void panic(const char *format, ...) __PF(1,2);
 __DEAD void badassert(const char *expr, const char *file,
 		      int line, const char *func);
+__DEAD void badassert_msg(const char *expr, const char *file,
+                          int line, const char *func, const char* format, ...);
+
 
 void kgets(char *buf, size_t maxbuflen);
 
