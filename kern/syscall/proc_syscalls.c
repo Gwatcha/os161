@@ -227,7 +227,7 @@ struct process_table_entry {
 
 static
 struct process_table_entry*
-process_table_entry_create(pid_t pid, pid_t parent_pid) {
+process_table_entry_create(pid_t pid, const pid_t* parent_pid) {
 
 	struct process_table_entry* pte = kmalloc(sizeof(struct process_table_entry));
 
@@ -237,7 +237,7 @@ process_table_entry_create(pid_t pid, pid_t parent_pid) {
 
 	array_init(&pte->pte_child_pids);
 
-	pte->pte_parent_pid = parent_pid;
+	pte->pte_parent_pid = parent_pid != NULL ? *parent_pid : -1;
 	pte->pte_has_exited = false;
 
 	return pte;
@@ -285,6 +285,34 @@ process_has_child(struct process_table_entry* parent, pid_t child_pid) {
 		}
 	}
 	return false;
+}
+
+/* Returns -1 on error */
+static
+pid_t
+reserve_pid(const pid_t* parent_pid /* may be NULL */) {
+
+        /* Find an unused pid */
+	for (pid_t pid = 1; pid < __PID_MAX; ++pid) {
+
+                if (parent_pid != NULL && pid == *parent_pid) {
+                        /* Avoid deadlocking on our own lock */
+                        continue;
+                }
+
+                if (proc_table[pid] == NULL) {
+                        lock_acquire(pid_locks[pid]);
+                        if (proc_table[pid] == NULL) {
+
+                                /* child_proc->p_pid = pid; */
+                                proc_table[pid] = process_table_entry_create(pid, parent_pid);
+                                lock_release(pid_locks[pid]);
+                                return pid;
+                        }
+                        lock_release(pid_locks[pid]);
+                }
+        }
+        return -1;
 }
 
 /* Private Utility Functions */
@@ -456,30 +484,11 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
         struct proc* child_proc = proc_create_runprogram(curproc->p_name);
 
 	/* Find an unused pid for the child */
-	for (pid_t pid = 1; ; ++pid) {
 
-                if (pid >= __PID_MAX) {
-                        lock_release(pid_locks[curpid]);
-                        return ENPROC;
-                }
-
-                if (pid == curpid) {
-                        /* Avoid deadlocking on our own lock */
-                        continue;
-                }
-
-
-                if (proc_table[pid] == NULL) {
-                        lock_acquire(pid_locks[pid]);
-                        if (proc_table[pid] == NULL) {
-
-                                child_proc->p_pid = pid;
-                                proc_table[pid] = process_table_entry_create(pid, curpid);
-                                lock_release(pid_locks[pid]);
-                                break;
-                        }
-                        lock_release(pid_locks[pid]);
-                }
+        const pid_t child_pid = reserve_pid(&curpid);
+        if (child_pid == -1) {
+                lock_release(pid_locks[curpid]);
+                return ENPROC;
         }
 
         /* Set the child's parent pid */
@@ -592,7 +601,6 @@ sys__exit(int exitcode) {
 
                 /* If parent has already exited, can destroy this entry */
 
-		
 		process_table_entry_destroy(p_table_entry); /* FIXME: kernel
 							       panics here! */
 		proc_table[curpid] = NULL;
