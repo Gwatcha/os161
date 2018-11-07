@@ -66,24 +66,21 @@ proc_table_init() {
 
 void
 pid_lock_acquire(pid_t pid) {
-        /* KASSERT(pid > 0); */
-        /* KASSERT(pid_locks[pid] != NULL); */
-        /* if (!lock_do_i_hold(pid_locks[pid])) */
-
-        /* kprintf("Acquire %s\n", pid_locks[pid]->lk_name); */
+        KASSERTM(!pid_lock_do_i_hold(pid), "pid %d", pid);
         lock_acquire(pid_locks[pid]);
-        /* (void)pid; */
+        DEBUG(DB_PROC_TABLE, "acquired pid_lock[%d]\n", pid);
 }
 
 void
 pid_lock_release(pid_t pid) {
-
-
-        /* if (lock_do_i_hold(pid_locks[pid])) */
-
-        /* kprintf("Release %s\n", pid_locks[pid]->lk_name); */
+        KASSERTM(pid_lock_do_i_hold(pid), "pid %d", pid);
         lock_release(pid_locks[pid]);
-        /* (void)pid; */
+        DEBUG(DB_PROC_TABLE, "released pid_lock[%d]\n", pid);
+}
+
+bool
+pid_lock_do_i_hold(pid_t pid) {
+        return lock_do_i_hold(pid_locks[pid]);
 }
 
 bool

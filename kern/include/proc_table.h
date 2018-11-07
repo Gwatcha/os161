@@ -42,6 +42,7 @@ void proc_table_init(void);
 
 void pid_lock_acquire(pid_t pid);
 void pid_lock_release(pid_t pid);
+bool pid_lock_do_i_hold(pid_t pid);
 
 /* Returns true if the proc_table contains an entry for pid */
 bool proc_table_entry_exists(pid_t pid);
