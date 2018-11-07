@@ -102,22 +102,21 @@ copyinstr_array(char ** user_ptr, char *** kbuff, int* argc, size_t* kargv_size,
 		 */
 
 		char* temp;
-		/* FIXME: fault on first copyin! */
 		err = copyin( (const_userptr_t) (user_ptr + i), &temp, sizeof(char*) );
-		addr_bytes_copied += sizeof(char*);
-		if (err) {
-			break;
-		}
 		if (maxcopy < addr_bytes_copied + string_bytes_copied) {
 			err = E2BIG;
 			break;
 		}
 
 		/* termination case */
-		if (temp == 0) {
+		if ( temp == 0) {
 			break;
 		}
 
+		addr_bytes_copied += sizeof(char*);
+		if (err) {
+			break;
+		}
 		(*kbuff)[i] = temp;
 
 		/* resize kbuff case */
@@ -171,7 +170,7 @@ copyinstr_array(char ** user_ptr, char *** kbuff, int* argc, size_t* kargv_size,
 
 		/* store this strings length in (*kbuff)[i], this is to make it easier to
 		   set up all the pointers from *kbuff to kstrings afterwards. */
-		(*kbuff)[i] = (char*) got;
+		(*kbuff)[i] = (char*) got; /* TODO: Maybe don't reuse same buffer? */
 
 		if (maxcopy < addr_bytes_copied + string_bytes_copied) {
 			err = E2BIG;
@@ -181,6 +180,7 @@ copyinstr_array(char ** user_ptr, char *** kbuff, int* argc, size_t* kargv_size,
 		i += 1;
 	}
 
+
 	/* clean up code in case of error */
 	if (err) {
 		kfree(*kbuff);
@@ -189,21 +189,12 @@ copyinstr_array(char ** user_ptr, char *** kbuff, int* argc, size_t* kargv_size,
 	}
 
 	/* lastly, set up *kbuff to point to the strings in kstrings
-	   note that i is equal to the end of kbuff + 1 */
+	   note that i is equal to the end of kbuff + 1 (where 0 was)*/
 	s = 0; /* used as index into kstrings */
 	for (int j = 0; j < i; j++) {
+		(*kbuff)[j] = kstrings + s;
 		s += (int) (*kbuff)[j]; /* both 32 bits */
-		(*kbuff)[j] = &kstrings[s];
 	}
-
-	/* if we are here, it is an invariant that (*kbuff)[i] == user_ptr[i] for i up to
-	   and including the index with 0 */
-	/* DEBUG ONLY: check the invariant */
-	// for (unsigned int i = 0; kbuff[i] != 0; i++) {
-	//         char * temp;
-	//         copyin( (const_userptr_t) user_ptr[i], &temp, sizeof(char*) );
-	//         KASSERT(kbuff[i] == temp);
-	// }
 
 	*argc = i; 
 	*kargv_size = addr_bytes_copied + string_bytes_copied; 
@@ -445,6 +436,10 @@ int sys_execv(const char *program, char **argv) {
 	/*
 	 * 8. Warp to user mode
 	 */
+
+        /* FIXME argc=2 for 1 word! */
+
+
 
 	/* clean up before doing so */
 	kfree(*kargv);
