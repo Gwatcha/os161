@@ -457,9 +457,9 @@ sys__exit(int exitcode) {
 
 	const pid_t curpid = curproc->p_pid;
 
-	KASSERT(proc_table_entry_exists(curpid));
 
         const pid_t parent_pid = proc_get_parent(curpid);
+	KASSERTM(proc_table_entry_exists(curpid), "pid %d", curpid);
 
         if (parent_pid != INVALID_PID) {
                 pid_lock_acquire(parent_pid);
@@ -477,10 +477,10 @@ sys__exit(int exitcode) {
                 pid_lock_acquire(child_pid);
 
 		/* child's proc table entry should exist until its parent exits */
-                KASSERT(proc_table_entry_exists(child_pid));
+                KASSERTM(proc_table_entry_exists(child_pid), "pid %d", child_pid);
 
 		/* this process should be the parent of its children */
-                KASSERT(proc_get_parent(child_pid) == curpid);
+                KASSERTM(proc_get_parent(child_pid) == curpid, "pid %d", child_pid);
 
                 if (proc_has_exited(child_pid)) {
 
