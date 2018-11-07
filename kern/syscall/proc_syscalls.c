@@ -45,8 +45,10 @@
  *           returned. If the total size of userptr exceeds maxcopy, E2BIG is
  *           returned.
  *  
- *           char** kbuff, will be overwritten with the address of the memory
- *           associated with kbuff, may have size larger than maxcopy
+ *           char*** kbuff, pass by reference parameter which is of tpye
+ *           char**, (an array of strings). will be written the address of the
+ *           memory associated with kbuff, may have size larger
+ *           than maxcopy
  * 
  *           int * argc, will be written with the number of arguments, 
  * 
@@ -58,7 +60,7 @@
  */
 static
 int
-copyinstr_array(char ** user_ptr, char ** kbuff, int* argc, size_t* kargv_size, int maxcopy) {
+copyinstr_array(char ** user_ptr, char *** kbuff, int* argc, size_t* kargv_size, int maxcopy) {
 
 	int err = 0;
 	/* running total number of bytes copied associated with kbuff string
@@ -72,35 +74,36 @@ copyinstr_array(char ** user_ptr, char ** kbuff, int* argc, size_t* kargv_size, 
 	 * user_ptr, it starts at 128 bytes (2^7) and is doubled if required,
 	 *
 	 * this is done for two kernel buffers, one which holds the addresses
-	 * of strings (kbuff), and one which holds all the strings (kstrings)
+	 * of strings (*kbuff), and one which holds all the strings (kstrings)
 	 *
-	 * kbuff and kstrings are connected so that kbuff[i] points to
+	 * *kbuff and kstrings are connected so that *kbuff[i] points to
 	 * an address inside kstrings which indicates the beginning of a string.
-	 * so kbuff[0] = &kstrings[0]
+	 * so *kbuff = &kstrings
 	 */
 
 	int initial_buf_size = 128;
-	kbuff = kmalloc(initial_buf_size);
+	*kbuff = kmalloc(initial_buf_size);
 	char * kstrings = kmalloc(initial_buf_size);
 	int kbuff_size = initial_buf_size;
 	int kstrings_size = initial_buf_size;
 
-	int i = 0; /* used as index for user_ptr[] and kbuff[] */
+	int i = 0; /* used as index for user_ptr[] and *kbuff[] */
 	int s = 0; /* keeps track of the next available spot in kstrings */
 
 	/* when this loop exits, we have either encountered an error or have
 	 * finished copying user memory. on each iteration, we copyin the next
 	 * string's address, and copyin the string for that address. In doing
 	 * so, we make sure to break on error or termination, as well as resize
-	 * kbuff and kstring if needed */
+	 * *kbuff and kstring if needed */
 	while( true ) {
 
 		/*
-		 * copy in string address at user_ptr + i to kbuff[i]
+		 * copy in string address at user_ptr + i to *kbuff[i]
 		 */
 
-		char* temp = NULL;
-		err = copyin( (const_userptr_t) (user_ptr + i), temp, sizeof(char*) );
+		char* temp;
+		/* FIXME: fault on first copyin! */
+		err = copyin( (const_userptr_t) (user_ptr + i), &temp, sizeof(char*) );
 		addr_bytes_copied += sizeof(char*);
 		if (err) {
 			break;
@@ -115,24 +118,24 @@ copyinstr_array(char ** user_ptr, char ** kbuff, int* argc, size_t* kargv_size, 
 			break;
 		}
 
-		kbuff[i] = temp;
+		(*kbuff)[i] = temp;
 
 		/* resize kbuff case */
 		if (addr_bytes_copied == kbuff_size) {
-			char ** koldbuff = kbuff;
-			kbuff = kmalloc(kbuff_size*2);
-			memcpy(kbuff, koldbuff, kbuff_size);
+			char ** koldbuff = *kbuff;
+			*kbuff = kmalloc(kbuff_size*2);
+			memcpy(*kbuff, koldbuff, kbuff_size);
 			kbuff_size *= 2;
 		}
 
 		/*
-		 * copy in the string at address kbuff[i] into kstrings[s]
+		 * copy in the string at address (*kbuff)[i] into kstrings[s]
 		 */
 
 		/* len for copyinstr is just the space left in kstrings*/
 		size_t  len = kstrings_size - string_bytes_copied;
 		size_t got;
-		err = copyinstr( (const_userptr_t) kbuff[i], (kstrings + s), len, &got);
+		err = copyinstr( (const_userptr_t) (*kbuff)[i], (kstrings + s), len, &got);
 		/* resize kstrings case (loop because we may do succesive resizes for this string) */
 		while (err == ENAMETOOLONG) {
 			err = 0;
@@ -146,6 +149,9 @@ copyinstr_array(char ** user_ptr, char ** kbuff, int* argc, size_t* kargv_size, 
 			kstrings = kmalloc(kstrings_size*2);
 			memcpy(koldstrings, kstrings, kstrings_size);
 			kstrings_size *= 2;
+
+			/* free old */
+			kfree(koldstrings);
 
 			/* retry copyinstr */
 			len = kstrings_size - string_bytes_copied;
@@ -163,9 +169,9 @@ copyinstr_array(char ** user_ptr, char ** kbuff, int* argc, size_t* kargv_size, 
 		string_bytes_copied += got;
 		s += got;
 
-		/* store this strings length in kbuff[i], this is to make it easier to
-		   set up all the pointers from kbuff to kstrings afterwards. */
-		kbuff[i] = (char*) got;
+		/* store this strings length in (*kbuff)[i], this is to make it easier to
+		   set up all the pointers from *kbuff to kstrings afterwards. */
+		(*kbuff)[i] = (char*) got;
 
 		if (maxcopy < addr_bytes_copied + string_bytes_copied) {
 			err = E2BIG;
@@ -177,27 +183,27 @@ copyinstr_array(char ** user_ptr, char ** kbuff, int* argc, size_t* kargv_size, 
 
 	/* clean up code in case of error */
 	if (err) {
-		kfree(kbuff);
+		kfree(*kbuff);
 		kfree(kstrings);
 		return err;
 	}
 
-	/* lastly, set up kbuff to point to the strings in kstrings
+	/* lastly, set up *kbuff to point to the strings in kstrings
 	   note that i is equal to the end of kbuff + 1 */
 	s = 0; /* used as index into kstrings */
 	for (int j = 0; j < i; j++) {
-		s += (int) kbuff[j]; /* both 32 bits */
-		kbuff[j] = &kstrings[s];
+		s += (int) (*kbuff)[j]; /* both 32 bits */
+		(*kbuff)[j] = &kstrings[s];
 	}
 
-	/* if we are here, it is an invariant that kbuff[i] = user_ptr[i] for i up to
+	/* if we are here, it is an invariant that (*kbuff)[i] == user_ptr[i] for i up to
 	   and including the index with 0 */
 	/* DEBUG ONLY: check the invariant */
-	for (unsigned int i = 0; kbuff[i] != 0; i++) {
-		char * temp = NULL;
-		copyin( (const_userptr_t) user_ptr[i], temp, sizeof(char*) );
-		KASSERT(kbuff[i] == temp);
-	}
+	// for (unsigned int i = 0; kbuff[i] != 0; i++) {
+	//         char * temp;
+	//         copyin( (const_userptr_t) user_ptr[i], &temp, sizeof(char*) );
+	//         KASSERT(kbuff[i] == temp);
+	// }
 
 	*argc = i; 
 	*kargv_size = addr_bytes_copied + string_bytes_copied; 
@@ -322,8 +328,8 @@ int sys_execv(const char *program, char **argv) {
 
 	int argc;
 	size_t kargv_size; 
-	char ** kargv = NULL;
-	err = copyinstr_array(argv, kargv, &argc, &kargv_size, ARG_MAX);
+	char ** kargv;
+	err = copyinstr_array(argv, &kargv, &argc, &kargv_size, ARG_MAX);
 	if (err) {
 		/* no need deallocate kargv on copyinstr_array err  */
 		as_activate();
@@ -331,10 +337,9 @@ int sys_execv(const char *program, char **argv) {
 	}
 
 	size_t got;
-	char * kprogram = NULL;
+	char * kprogram = kmalloc(NAME_MAX);
 	err = copyinstr((const_userptr_t)program, kprogram, NAME_MAX, &got);
 	if (err) {
-		as_activate();
 		goto err;
 	}
 
@@ -403,7 +408,6 @@ int sys_execv(const char *program, char **argv) {
 		goto err;
 	}
 
-
 	/*
 	 * Clean up old address space
 	 */
@@ -417,6 +421,7 @@ int sys_execv(const char *program, char **argv) {
 	/* clean up before doing so */
 	kfree(*kargv);
 	kfree(kargv);
+	kfree(kprogram);
 	vfs_close(v);
 
 	as_activate();
@@ -431,6 +436,7 @@ int sys_execv(const char *program, char **argv) {
 err:
 	kfree(*kargv); 
 	kfree(kargv);
+	kfree(kprogram);
 
 	/* clean up address space */
 	proc_setas(old_as);
