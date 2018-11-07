@@ -132,15 +132,14 @@ reserve_pid(const pid_t* parent_pid /* may be NULL */) {
                 }
 
                 if (p_table[pid] == NULL) {
-                        lock_acquire(pid_locks[pid]);
+                        pid_lock_acquire(pid);
                         if (p_table[pid] == NULL) {
 
-                                /* child_proc->p_pid = pid; */
                                 p_table[pid] = proc_table_entry_create(pid, parent_pid);
-                                lock_release(pid_locks[pid]);
+                                pid_lock_release(pid);
                                 return pid;
                         }
-                        lock_release(pid_locks[pid]);
+                        pid_lock_acquire(pid);
                 }
         }
         return INVALID_PID;
