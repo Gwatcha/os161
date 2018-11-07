@@ -54,7 +54,7 @@
  *       Returns: 0 on success, error code on failure. possible error codes: E2BIG, EFAULT
  *       Postconditions: if return was successful, caller must call kfree(*kbuff)
  *                       and kfree(kbuff) when finished with kbuff. If
- *                       unsucessful, caller is discard kbuff.
+ *                       unsucessful, caller is to discard kbuff.
  */
 static
 int
@@ -249,7 +249,7 @@ process_table_entry_create(pid_t pid, pid_t parent_pid) {
 static
 void
 process_table_entry_destroy(struct process_table_entry* pte) {
-	cv_destroy(pte->pte_waitpid_cv);
+	cv_destroy(pte->pte_waitpid_cv); /* FIXME: kpanic!  */
 
 	array_setsize(&pte->pte_child_pids, 0);
 	array_cleanup(&pte->pte_child_pids);
@@ -307,19 +307,12 @@ int sys_execv(const char *program, char **argv) {
 	 * EFAULT       One of the arguments is an invalid pointer.
 	 */
 
-	/* variables are defined here in case of early branch err */
 	int err = 0;
-
-	char ** kargv = NULL;
-	char * kprogram = NULL;
-
-	struct vnode * v = NULL;
-	struct addrspace * new_as = NULL;
-	vaddr_t entrypoint, stackptr;
-	struct addrspace * old_as = proc_getas();
 
 	/* deactivate address space since it will be in a volatile state, in
 	 * DUMBVIM, this does nothing */
+	struct addrspace * old_as = proc_getas();
+	struct addrspace * new_as = NULL; /* null for now */
 	as_deactivate();
 
 	/* ---------------------------------------------------------------- */
@@ -331,14 +324,19 @@ int sys_execv(const char *program, char **argv) {
 
 	int argc;
 	size_t kargv_size; 
+	char ** kargv = NULL;
 	err = copyinstr_array(argv, kargv, &argc, &kargv_size, ARG_MAX);
 	if (err) {
-		goto err;
+		/* no need deallocate kargv on copyinstr_array err  */
+		as_activate();
+		return err;
 	}
 
 	size_t got;
+	char * kprogram = NULL;
 	err = copyinstr((const_userptr_t)program, kprogram, NAME_MAX, &got);
 	if (err) {
+		as_activate();
 		goto err;
 	}
 
@@ -364,12 +362,16 @@ int sys_execv(const char *program, char **argv) {
 	 */
 
 	/* Open the file. */
+	struct vnode * v;
 	err = vfs_open(kprogram, O_RDONLY, 0, &v);
 	if (err) {
 		goto err;
 	}
+
+	vaddr_t entrypoint;
 	err = load_elf(v, &entrypoint);
 	if (err) {
+		vfs_close(v);
 		goto err;
 	}
 
@@ -378,9 +380,11 @@ int sys_execv(const char *program, char **argv) {
 	 */
 
 	/* Define the user stack in the new address space */
+	vaddr_t stackptr;
 	err = as_define_stack(new_as, &stackptr);
 	if (err) {
-		return err;
+		vfs_close(v);
+		goto err;
 	}
 
 	/*
@@ -395,7 +399,12 @@ int sys_execv(const char *program, char **argv) {
 	 */
 
 	stackptr -= kargv_size;
-	copyout( kargv, (userptr_t) stackptr, kargv_size);
+	err = copyout( kargv, (userptr_t) stackptr, kargv_size);
+	if (err) {
+		vfs_close(v);
+		goto err;
+	}
+
 
 	/*
 	 * Clean up old address space
@@ -422,9 +431,8 @@ int sys_execv(const char *program, char **argv) {
 	return EINVAL;
 
 err:
-	kfree(*kargv); /* TODO: triggers panic :( */
+	kfree(*kargv); 
 	kfree(kargv);
-	vfs_close(v); /* if never opened? */
 
 	/* clean up address space */
 	proc_setas(old_as);
@@ -583,7 +591,9 @@ sys__exit(int exitcode) {
 		/* !parent_still_exists || parent_has_exited) { */
 		/* If parent has already exited, can destroy this entry */
 
-		process_table_entry_destroy(p_table_entry);
+		
+		process_table_entry_destroy(p_table_entry); /* FIXME: kernel
+							       panics here! */
 		proc_table[curpid] = NULL;
 	}
 	else {
