@@ -375,19 +375,24 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
 
         const pid_t curpid = curproc->p_pid;
 
+        KASSERT(curpid != INVALID_PID);
+
         pid_lock_acquire(curpid);
 
         /* Create child process with proc_create */
-        struct proc* child_proc = proc_create_runprogram(curproc->p_name);
+
+        const pid_t child_pid = reserve_pid(curpid);
+
+        struct proc* child_proc = proc_create(curproc->p_name, child_pid);
 
 	/* Find an unused pid for the child */
-        const pid_t child_pid = reserve_pid(&curpid);
-        if (child_pid == INVALID_PID) {
-                pid_lock_release(curpid);
-                return ENPROC;
-        }
+        /* const pid_t child_pid = reserve_pid(curpid); */
+        /* if (child_pid == INVALID_PID) { */
+        /*         pid_lock_release(curpid); */
+        /*         return ENPROC; */
+        /* } */
 
-        child_proc->p_pid = child_pid;
+        /* child_proc->p_pid = child_pid; */
 
         KASSERT(proc_table_entry_exists(curpid));
 
@@ -456,7 +461,9 @@ sys__exit(int exitcode) {
 
         const pid_t parent_pid = proc_get_parent(curpid);
 
-        pid_lock_acquire(parent_pid);
+        if (parent_pid != INVALID_PID) {
+                pid_lock_acquire(parent_pid);
+        }
         pid_lock_acquire(curpid);
 
         struct array* child_pids = proc_get_children(curpid);
@@ -483,7 +490,8 @@ sys__exit(int exitcode) {
                 pid_lock_release(child_pid);
         }
 
-	if (proc_table_entry_exists(parent_pid) &&
+	if (parent_pid != INVALID_PID &&
+            proc_table_entry_exists(parent_pid) &&
             !proc_has_exited(parent_pid) &&
             proc_has_child(parent_pid, curpid)) {
 
@@ -495,7 +503,11 @@ sys__exit(int exitcode) {
         }
 
         pid_lock_release(curpid);
-        pid_lock_release(parent_pid);
+        if (parent_pid != INVALID_PID) {
+                pid_lock_release(parent_pid);
+        }
+        /* I believe we need something like this */
+        /* proc_destroy(curproc); */
 
 	(void)exitcode;
 	thread_exit();

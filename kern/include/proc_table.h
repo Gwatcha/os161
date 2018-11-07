@@ -65,7 +65,7 @@ bool proc_has_exited(pid_t proc);
 
 
 /* Returns INVALID_PID if a pid cannot be reserved */
-pid_t reserve_pid(const pid_t* parent_pid /* may be NULL */);
+pid_t reserve_pid(pid_t parent_pid /* may be INVALID_PID */);
 
 
 #endif /* _PROC_TABLE_H_ */

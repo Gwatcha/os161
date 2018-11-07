@@ -126,9 +126,8 @@ open_console(struct proc* p, int fd, int flags) {
 /*
  * Create a proc structure.
  */
-static
 struct proc *
-proc_create(const char *name)
+proc_create(const char *name, pid_t pid)
 {
 	struct proc *proc;
 
@@ -157,7 +156,13 @@ proc_create(const char *name)
         }
 
         /* Initialize the pid */
-        proc->p_pid = INVALID_PID;
+        KASSERT(pid != INVALID_PID);
+        proc->p_pid = pid;
+        /* reserve_pid(parent_pid); */
+
+        /* kprintf("Reserve pid %d -> %d\n", parent_pid, proc->p_pid); */
+        /* proc->p_pid = 1; */
+        /* (void)parent_pid; */
 
         /* TODO Open stdin, stdout, and stderr  */
         /* open_console(proc, STDIN_FILENO, O_RDONLY); */
@@ -267,12 +272,13 @@ proc_destroy(struct proc *proc)
 void
 proc_bootstrap(void)
 {
-	kproc = proc_create("[kernel]");
+        /* TODO: come up with a better way of specifying that the kernel has pid 1 */
+        proc_table_init();
+	kproc = proc_create("[kernel]", 1);
 	if (kproc == NULL) {
 		panic("proc_create for kproc failed\n");
 	}
-        kproc->p_pid = 1;
-        proc_table_init();
+        /* kproc->p_pid = 1; */
 }
 
 /*
@@ -286,7 +292,7 @@ proc_create_runprogram(const char *name)
 {
 	struct proc *newproc;
 
-	newproc = proc_create(name);
+	newproc = proc_create(name, reserve_pid(INVALID_PID));
 	if (newproc == NULL) {
 		return NULL;
 	}

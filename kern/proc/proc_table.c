@@ -24,7 +24,7 @@ static struct lock* pid_locks[__PID_MAX] = { NULL };
 
 static
 struct proc_table_entry*
-proc_table_entry_create(pid_t pid, const pid_t* parent_pid) {
+proc_table_entry_create(pid_t pid, const pid_t parent_pid /* may be INVALID_PID */) {
 
 	struct proc_table_entry* pte = kmalloc(sizeof(struct proc_table_entry));
 
@@ -34,7 +34,7 @@ proc_table_entry_create(pid_t pid, const pid_t* parent_pid) {
 
 	array_init(&pte->pte_child_pids);
 
-	pte->pte_parent_pid = parent_pid != NULL ? *parent_pid : INVALID_PID;
+	pte->pte_parent_pid = parent_pid;
 	pte->pte_has_exited = false;
 
 	return pte;
@@ -53,8 +53,9 @@ proc_table_entry_destroy(struct proc_table_entry* pte) {
 
 void
 proc_table_init() {
-        /* TEMP HACK */
-	p_table[1] = proc_table_entry_create(1, NULL);
+
+        /* TODO: come up with a better way of specifying that the kernel has pid 1 */
+	p_table[1] = proc_table_entry_create(1, INVALID_PID);
 
         for (pid_t i = 0; i < __PID_MAX; ++i) {
                 char buf[64];
@@ -65,12 +66,24 @@ proc_table_init() {
 
 void
 pid_lock_acquire(pid_t pid) {
+        /* KASSERT(pid > 0); */
+        /* KASSERT(pid_locks[pid] != NULL); */
+        /* if (!lock_do_i_hold(pid_locks[pid])) */
+
+        /* kprintf("Acquire %s\n", pid_locks[pid]->lk_name); */
         lock_acquire(pid_locks[pid]);
+        /* (void)pid; */
 }
 
 void
 pid_lock_release(pid_t pid) {
+
+
+        /* if (lock_do_i_hold(pid_locks[pid])) */
+
+        /* kprintf("Release %s\n", pid_locks[pid]->lk_name); */
         lock_release(pid_locks[pid]);
+        /* (void)pid; */
 }
 
 bool
@@ -123,10 +136,10 @@ bool proc_has_exited(pid_t pid) {
 
 /* Returns INVALID_PID if a pid cannot be reserved */
 pid_t
-reserve_pid(const pid_t* parent_pid /* may be NULL */) {
+reserve_pid(pid_t parent_pid /* may be INVALID_PID */) {
 	for (pid_t pid = 1; pid < __PID_MAX; ++pid) {
 
-                if (parent_pid != NULL && pid == *parent_pid) {
+                if (pid == parent_pid) {
                         /* Avoid deadlocking on our own lock */
                         continue;
                 }
@@ -139,7 +152,7 @@ reserve_pid(const pid_t* parent_pid /* may be NULL */) {
                                 pid_lock_release(pid);
                                 return pid;
                         }
-                        pid_lock_acquire(pid);
+                        pid_lock_release(pid);
                 }
         }
         return INVALID_PID;
