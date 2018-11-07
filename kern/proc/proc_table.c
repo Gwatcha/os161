@@ -131,7 +131,7 @@ void proc_exit(pid_t proc, int status) {
         p_table[proc]->pte_exit_status = status;
 }
 bool proc_has_exited(pid_t pid) {
-        return p_table[pid]->pte_parent_pid;
+        return p_table[pid]->pte_has_exited;
 }
 
 /* Returns INVALID_PID if a pid cannot be reserved */
