@@ -33,5 +33,32 @@
 /*
  * Operations on the process table (used in proc.c and proc_syscall.c)
  */
+#include "types.h"
+
+#define INVALID_PID -1
+
+/* struct process_table_entry { */
+/* 	struct cv* pte_waitpid_cv; */
+/* 	struct array pte_child_pids; */
+/* 	pid_t pte_parent_pid; */
+/* 	bool pte_has_exited; */
+/* 	int pte_exit_status; */
+/* 	/\* int pte_refcount; *\/ */
+/* }; */
+
+void proc_table_init(void);
+
+void pid_lock_acquire(pid_t pid);
+void pid_lock_release(pid_t pid);
+
+/* Returns true if the proc_table contains an entry for pid */
+bool proc_table_entry_exists(pid_t pid);
+
+/* Returns true if parent is the parent of child */
+bool proc_has_child(pid_t parent, pid_t child);
+
+/* Returns INVALID_PID if a pid cannot be reserved */
+pid_t reserve_pid(const pid_t* parent_pid /* may be NULL */);
+
 
 #endif /* _PROC_TABLE_H_ */
