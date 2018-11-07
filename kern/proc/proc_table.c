@@ -88,7 +88,7 @@ pid_lock_release(pid_t pid) {
 
 bool
 proc_table_entry_exists(pid_t pid) {
-        return p_table[pid] != NULL;
+        return pid > 0 && p_table[pid] != NULL;
 }
 
 void remove_proc_table_entry(pid_t pid) {
