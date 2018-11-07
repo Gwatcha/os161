@@ -51,6 +51,19 @@ void remove_proc_table_entry(pid_t pid);
 /* Returns true if parent is the parent of child */
 bool proc_has_child(pid_t parent, pid_t child);
 
+/* Returns error code */
+int proc_add_child(pid_t parent, pid_t child);
+
+
+struct array* proc_get_children(pid_t proc);
+
+/* Returns INVALID_PID if the process does not have a parent */
+pid_t proc_get_parent(pid_t proc);
+
+void proc_exit(pid_t proc, int status);
+bool proc_has_exited(pid_t proc);
+
+
 /* Returns INVALID_PID if a pid cannot be reserved */
 pid_t reserve_pid(const pid_t* parent_pid /* may be NULL */);
 

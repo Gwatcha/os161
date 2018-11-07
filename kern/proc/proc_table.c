@@ -98,6 +98,29 @@ proc_has_child(pid_t parent_pid, pid_t child_pid) {
 	return false;
 }
 
+int
+proc_add_child(pid_t parent, pid_t child) {
+        return array_add(&p_table[parent]->pte_child_pids, (void*)child, NULL);
+}
+
+struct array*
+proc_get_children(pid_t pid) {
+        return &p_table[pid]->pte_child_pids;
+}
+
+/* Returns INVALID_PID if the process does not have a parent */
+pid_t proc_get_parent(pid_t pid) {
+        return p_table[pid]->pte_parent_pid;
+}
+
+void proc_exit(pid_t proc, int status) {
+        p_table[proc]->pte_has_exited = true;
+        p_table[proc]->pte_exit_status = status;
+}
+bool proc_has_exited(pid_t pid) {
+        return p_table[pid]->pte_parent_pid;
+}
+
 /* Returns INVALID_PID if a pid cannot be reserved */
 pid_t
 reserve_pid(const pid_t* parent_pid /* may be NULL */) {
