@@ -6,7 +6,7 @@
 #include "synch.h"
 
 struct proc_table_entry {
-	struct cv* pte_waitpid_cv;
+	/* struct cv* pte_waitpid_cv; */
 	struct array pte_child_pids;
 	pid_t pte_parent_pid;
 	bool pte_has_exited;
@@ -30,7 +30,7 @@ proc_table_entry_create(pid_t pid, const pid_t* parent_pid) {
 
 	/* TODO: Better name for the CV */
 	(void)pid;
-	pte->pte_waitpid_cv = cv_create("");
+	/* pte->pte_waitpid_cv = cv_create(""); */
 
 	array_init(&pte->pte_child_pids);
 
@@ -43,7 +43,7 @@ proc_table_entry_create(pid_t pid, const pid_t* parent_pid) {
 static
 void
 proc_table_entry_destroy(struct proc_table_entry* pte) {
-	cv_destroy(pte->pte_waitpid_cv); /* FIXME: kpanic!  */
+	/* cv_destroy(pte->pte_waitpid_cv); /\* FIXME: kpanic!  *\/ */
 
 	array_setsize(&pte->pte_child_pids, 0);
 	array_cleanup(&pte->pte_child_pids);
