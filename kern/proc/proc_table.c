@@ -101,8 +101,6 @@ void remove_proc_table_entry(pid_t pid) {
 bool
 proc_has_child(pid_t parent, pid_t child) {
 
-        KASSERTM(pid_lock_do_i_hold(parent), "pid %d", parent);
-
         const struct array* child_pids = &p_table[parent]->pte_child_pids;
 
 	for (unsigned i = 0; i < child_pids->num; ++i) {
