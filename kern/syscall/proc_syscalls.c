@@ -378,6 +378,7 @@ int sys_execv(const char *program, char **argv) {
 	 */
 
 	proc_setas(new_as);
+	as_activate();
 
 	/*
 	 * Load new executable
@@ -393,9 +394,13 @@ int sys_execv(const char *program, char **argv) {
 	vaddr_t entrypoint;
 	err = load_elf(v, &entrypoint);
 	if (err) {
-		vfs_close(v);
+                vfs_close(v);
 		goto err;
 	}
+
+        /* done with file */
+        vfs_close(v);
+
 
 	/*
 	 * Define new stack region
@@ -405,7 +410,6 @@ int sys_execv(const char *program, char **argv) {
 	vaddr_t stackptr;
 	err = as_define_stack(new_as, &stackptr);
 	if (err) {
-		vfs_close(v);
 		goto err;
 	}
 
@@ -421,11 +425,22 @@ int sys_execv(const char *program, char **argv) {
 	 */
 
 	stackptr -= kargv_size;
-	err = copyout( kargv, (userptr_t) stackptr, kargv_size);
+
+        /* copy pointers */
+	err = copyout( kargv, (userptr_t) stackptr, sizeof(char*)*argc);
 	if (err) {
-		vfs_close(v);
 		goto err;
 	}
+
+        /* TODO FIXME */
+        /* copy arguments */
+        /* for (int i = 0; i < argc; i++) { */
+        /*         err = copyout( kargv[i], (userptr_t) stackptr + , ); */
+        /*         if (err) { */
+        /*                 goto err; */
+        /*         } */
+        /* } */
+
 
 	/*
 	 * Clean up old address space
@@ -437,17 +452,12 @@ int sys_execv(const char *program, char **argv) {
 	 * 8. Warp to user mode
 	 */
 
-        /* FIXME argc=2 for 1 word! */
-
-
 
 	/* clean up before doing so */
 	kfree(*kargv);
 	kfree(kargv);
 	kfree(kprogram);
-	vfs_close(v);
 
-	as_activate();
 	enter_new_process(argc, (userptr_t) stackptr /*userspace addr of argv*/,
 			NULL /*userspace addr of environment*/,
 			stackptr, entrypoint);
