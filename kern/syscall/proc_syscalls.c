@@ -59,10 +59,10 @@ int sys_execv(const char *program, char **argv) {
 	int err = 0;
 
 
-	 /* * DUMBVIM, this does nothing */
 	struct addrspace * old_as = proc_getas();
 	struct addrspace * new_as = NULL; /* null for now */
-        /* as_deactivate(); */
+	/* DUMBVIM, this does nothing */
+	as_deactivate();
 
 	/* ---------------------------------------------------------------- */
 
@@ -72,7 +72,7 @@ int sys_execv(const char *program, char **argv) {
 	 */
 
 	int argc;
-	size_t kargv_size; 
+	size_t kargv_size;
 	char ** kargv;
 	err = copyinstr_array((userptr_t) argv, &kargv, &argc, &kargv_size, ARG_MAX);
 	if (err) {
@@ -94,7 +94,7 @@ int sys_execv(const char *program, char **argv) {
 
 	new_as = as_create();
 	if (new_as == NULL) {
-                err = ENOMEM;
+		err = ENOMEM;
 		goto err;
 	}
 
@@ -102,11 +102,9 @@ int sys_execv(const char *program, char **argv) {
 	 * Switch to new address space
 	 */
 
-	proc_setas(new_as);
+	/* as_activate invalidates tlb indexes */
 	as_activate();
-
-        /* TODO */
-        /* curthread->t_addrspace = as_new; */
+	proc_setas(new_as);
 
 	/*
 	 * Load new executable
@@ -122,12 +120,12 @@ int sys_execv(const char *program, char **argv) {
 	vaddr_t entrypoint;
 	err = load_elf(v, &entrypoint);
 	if (err) {
-                vfs_close(v);
+		vfs_close(v);
 		goto err;
 	}
 
-        /* done with file */
-        vfs_close(v);
+	/* done with file */
+	vfs_close(v);
 
 
 	/*
@@ -141,21 +139,25 @@ int sys_execv(const char *program, char **argv) {
 		goto err;
 	}
 
-        /*
-         * Copy arguments to new address space, properly arranging them.
-         * Arguments are pointers in registers into user space.
-         *         - a0: argc
-         *         - a1: char** pointer that points to a string array of length argc
-         * we chose to store argc and the program name on the stack, so first
-         * we need to make space on it. Since the stackpointer is subtract then
-         * store, it is currently at the highest address + 1 in the stack
-         * pointer area, so we just subtract the number of bytes read from userspace.
-         */
+	/*
+	 * Copy arguments to new address space, properly arranging them.
+	 * Arguments are pointers in registers into user space.
+	 *         - a0: argc
+	 *         - a1: char** pointer that points to a string array of length argc
+	 * we chose to store argc and the program name on the stack, so first
+	 * we need to make space on it. Since the stackpointer is subtract then
+	 * store, it is currently at the highest address + 1 in the stack
+	 * pointer area, so we just subtract the number of bytes read from userspace.
+	 */
 
 	stackptr -= kargv_size;
 
-        /* kargv into stackptr*/
+	/* kargv into stackptr*/
 	err = copyoutstr_array( (const char**) kargv, (userptr_t) stackptr, argc, kargv_size);
+        /* kargc dosen't contain the length currently, so copy argc out as well*/
+        stackptr -= sizeof(int);
+        err = copyout(&argc, (userptr_t) stackptr, sizeof(int));
+
 	if (err) {
 		goto err;
 	}
@@ -185,7 +187,7 @@ int sys_execv(const char *program, char **argv) {
 	return EINVAL;
 
 err:
-	kfree(*kargv); 
+	kfree(*kargv);
 	kfree(kargv);
 	kfree(kprogram);
 
@@ -205,36 +207,36 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
 	 * ENOMEM  Sufficient virtual memory for the new process was not available.
 	 */
 
-        const pid_t curpid = curproc->p_pid;
+	const pid_t curpid = curproc->p_pid;
 
-        pid_lock_acquire(curpid);
+	pid_lock_acquire(curpid);
 
-        KASSERTM(proc_table_entry_exists(curpid), "pid %d", curpid);
+	KASSERTM(proc_table_entry_exists(curpid), "pid %d", curpid);
 
 	/* Find an unused pid for the child */
-        const pid_t child_pid = reserve_pid(curpid);
-        if (child_pid == INVALID_PID) {
-                pid_lock_release(curpid);
-                return ENPROC;
-        }
+	const pid_t child_pid = reserve_pid(curpid);
+	if (child_pid == INVALID_PID) {
+		pid_lock_release(curpid);
+		return ENPROC;
+	}
 
-        DEBUG(DB_PROC_TABLE, "fork %d -> %d\n", curpid, child_pid);
+	DEBUG(DB_PROC_TABLE, "fork %d -> %d\n", curpid, child_pid);
 
-        /* Create child process with proc_create */
-        struct proc* child_proc = proc_create(curproc->p_name, child_pid);
+	/* Create child process with proc_create */
+	struct proc* child_proc = proc_create(curproc->p_name, child_pid);
 
-        /* Add the child's pid to the parent's list of children */
-        int error = proc_add_child(curpid, child_pid);
-        if (error) {
-                pid_lock_release(curpid);
-                return error;
-        }
+	/* Add the child's pid to the parent's list of children */
+	int error = proc_add_child(curpid, child_pid);
+	if (error) {
+		pid_lock_release(curpid);
+		return error;
+	}
 
-        /* Copy the address space */
-        as_copy(curproc->p_addrspace, &child_proc->p_addrspace);
+	/* Copy the address space */
+	as_copy(curproc->p_addrspace, &child_proc->p_addrspace);
 
-        /* Copy the file table */
-        file_table_copy(&curproc->p_file_table, &child_proc->p_file_table);
+	/* Copy the file table */
+	file_table_copy(&curproc->p_file_table, &child_proc->p_file_table);
 
 	/* TODO: Copy threads */
 
@@ -244,12 +246,12 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
 	struct trapframe* tf_copy = kmalloc(sizeof(struct trapframe));
 	memcpy(tf_copy, trapframe, sizeof(struct trapframe));
 
-        /* Fork the child process */
-        thread_fork("child", child_proc, &enter_forked_process_wrapper, tf_copy, 0);
+	/* Fork the child process */
+	thread_fork("child", child_proc, &enter_forked_process_wrapper, tf_copy, 0);
 
-        *retval = child_proc->p_pid;
+	*retval = child_proc->p_pid;
 
-        pid_lock_release(curpid);
+	pid_lock_release(curpid);
 
 	return 0;
 }
@@ -284,17 +286,17 @@ sys__exit(int exitcode) {
 
 	const pid_t curpid = curproc->p_pid;
 
-        DEBUG(DB_PROC_TABLE, "exit %d\n", curpid);
+	DEBUG(DB_PROC_TABLE, "exit %d\n", curpid);
 
 	KASSERTM(proc_table_entry_exists(curpid), "pid %d", curpid);
 
-        const pid_t parent_pid = proc_get_parent(curpid);
-        if (parent_pid != INVALID_PID) {
-                pid_lock_acquire(parent_pid);
-        }
-        pid_lock_acquire(curpid);
+	const pid_t parent_pid = proc_get_parent(curpid);
+	if (parent_pid != INVALID_PID) {
+		pid_lock_acquire(parent_pid);
+	}
+	pid_lock_acquire(curpid);
 
-        struct array* child_pids = proc_get_children(curpid);
+	struct array* child_pids = proc_get_children(curpid);
 
 	/* Clean up proc_table_entry of each child that has already exited */
 	unsigned num_children = child_pids->num;
@@ -302,66 +304,66 @@ sys__exit(int exitcode) {
 
 		pid_t child_pid = (pid_t)array_get(child_pids, i);
 
-                DEBUG(DB_PROC_TABLE, "%d examining child %d\n", curpid, child_pid);
+		DEBUG(DB_PROC_TABLE, "%d examining child %d\n", curpid, child_pid);
 
-                pid_lock_acquire(child_pid);
+		pid_lock_acquire(child_pid);
 
 		/* child's proc table entry should exist until its parent exits */
-                KASSERTM(proc_table_entry_exists(child_pid), "pid %d", child_pid);
+		KASSERTM(proc_table_entry_exists(child_pid), "pid %d", child_pid);
 
 		/* this process should be the parent of its children */
-                KASSERTM(proc_get_parent(child_pid) == curpid, "pid %d", child_pid);
+		KASSERTM(proc_get_parent(child_pid) == curpid, "pid %d", child_pid);
 
-                if (proc_has_exited(child_pid)) {
+		if (proc_has_exited(child_pid)) {
 
-                        DEBUG(DB_PROC_TABLE, "remove_proc_table_entry(%d) - child\n", child_pid);
-                        remove_proc_table_entry(child_pid);
-                }
+			DEBUG(DB_PROC_TABLE, "remove_proc_table_entry(%d) - child\n", child_pid);
+			remove_proc_table_entry(child_pid);
+		}
 
-                pid_lock_release(child_pid);
-        }
+		pid_lock_release(child_pid);
+	}
 
-        proc_exit(curpid, exitcode);
+	proc_exit(curpid, exitcode);
 
-        enum parent_status {
-                ps_invalid,
-                ps_no_entry,
-                ps_has_exited,
-                ps_pid_recycled,
-                ps_alive,
-                ps_count
-        };
+	enum parent_status {
+		ps_invalid,
+		ps_no_entry,
+		ps_has_exited,
+		ps_pid_recycled,
+		ps_alive,
+		ps_count
+	};
 
-        enum parent_status pstatus =
-                parent_pid == INVALID_PID               ? ps_invalid :
-                !proc_table_entry_exists(parent_pid)    ? ps_no_entry :
-                proc_has_exited(parent_pid)             ? ps_has_exited :
-                !proc_has_child(parent_pid, curpid)     ? ps_pid_recycled :
-                                                          ps_alive;
+	enum parent_status pstatus =
+		parent_pid == INVALID_PID               ? ps_invalid :
+		!proc_table_entry_exists(parent_pid)    ? ps_no_entry :
+		proc_has_exited(parent_pid)             ? ps_has_exited :
+		!proc_has_child(parent_pid, curpid)     ? ps_pid_recycled :
+		ps_alive;
 
-        if (pstatus != ps_alive) {
+	if (pstatus != ps_alive) {
 
-                /* Destroy this entry; there is no living parent that may call waitpid */
+		/* Destroy this entry; there is no living parent that may call waitpid */
 		remove_proc_table_entry(curpid);
 
-                const char* db_format[ps_count] = {
-                        "remove_proc_table_entry(%d), parent %d is invalid\n",
-                        "remove_proc_table_entry(%d), parent %d has no entry\n",
-                        "remove_proc_table_entry(%d), parent %d has exited\n",
-                        "remove_proc_table_entry(%d), parent %d has been recycled\n",
-                        NULL
-                };
+		const char* db_format[ps_count] = {
+			"remove_proc_table_entry(%d), parent %d is invalid\n",
+			"remove_proc_table_entry(%d), parent %d has no entry\n",
+			"remove_proc_table_entry(%d), parent %d has exited\n",
+			"remove_proc_table_entry(%d), parent %d has been recycled\n",
+			NULL
+		};
 
-                DEBUG(DB_PROC_TABLE, db_format[pstatus], curpid, parent_pid);
-        }
+		DEBUG(DB_PROC_TABLE, db_format[pstatus], curpid, parent_pid);
+	}
 
-        pid_lock_release(curpid);
-        if (parent_pid != INVALID_PID) {
-                pid_lock_release(parent_pid);
-        }
+	pid_lock_release(curpid);
+	if (parent_pid != INVALID_PID) {
+		pid_lock_release(parent_pid);
+	}
 
-        /* Print in reverse (easy way to tell where the call began and ended) */
-        DEBUG(DB_PROC_TABLE, "%d exit\n", curpid);
+	/* Print in reverse (easy way to tell where the call began and ended) */
+	DEBUG(DB_PROC_TABLE, "%d exit\n", curpid);
 
-        thread_exit_destroy_proc();
+	thread_exit_destroy_proc();
 }

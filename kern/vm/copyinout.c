@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009
- *	The President and Fellows of Harvard College.
+ *  The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -96,7 +96,7 @@
  * stack to where setjmp() was called. At that point we return EFAULT.
  */
 static
-void
+	void
 copyfail(void)
 {
 	longjmp(curthread->t_machdep.tm_copyjmp, 1);
@@ -114,7 +114,7 @@ copyfail(void)
  * Assumes userspace runs from 0 through USERSPACETOP-1.
  */
 static
-int
+	int
 copycheck(const_userptr_t userptr, size_t len, size_t *stoplen)
 {
 	vaddr_t bot, top;
@@ -149,7 +149,7 @@ copycheck(const_userptr_t userptr, size_t len, size_t *stoplen)
  * to kernel address DEST. We can use memcpy because it's protected by
  * the tm_badfaultfunc/copyfail logic.
  */
-int
+	int
 copyin(const_userptr_t usersrc, void *dest, size_t len)
 {
 	int result;
@@ -185,7 +185,7 @@ copyin(const_userptr_t usersrc, void *dest, size_t len)
  * user-level address USERDEST. We can use memcpy because it's
  * protected by the tm_badfaultfunc/copyfail logic.
  */
-int
+	int
 copyout(const void *src, userptr_t userdest, size_t len)
 {
 	int result;
@@ -231,9 +231,9 @@ copyout(const void *src, userptr_t userdest, size_t len)
  * ENAMETOOLONG.
  */
 static
-int
+	int
 copystr(char *dest, const char *src, size_t maxlen, size_t stoplen,
-	size_t *gotlen)
+		size_t *gotlen)
 {
 	size_t i;
 
@@ -262,7 +262,7 @@ copystr(char *dest, const char *src, size_t maxlen, size_t stoplen,
  * logic to protect against invalid addresses supplied by a user
  * process.
  */
-int
+	int
 copyinstr(const_userptr_t usersrc, char *dest, size_t len, size_t *actual)
 {
 	int result;
@@ -295,7 +295,7 @@ copyinstr(const_userptr_t usersrc, char *dest, size_t len, size_t *actual)
  * logic to protect against invalid addresses supplied by a user
  * process.
  */
-int
+	int
 copyoutstr(const char *src,  userptr_t userdest, size_t len, size_t *actual)
 {
 	int result;
@@ -333,14 +333,14 @@ copyoutstr(const char *src,  userptr_t userdest, size_t len, size_t *actual)
  *           terminated by 0. All strings are null terminated, if not EFAULT is
  *           returned. If the total size of userptr exceeds maxcopy, E2BIG is
  *           returned.
- *  
+ *
  *           char*** dest, pass by reference parameter which is of tpye
  *           char**, (an array of strings). will be written the address of the
  *           memory associated with dest. *dest becomes a kmalloced null terminated
  *           array of string addresses if no error
- * 
- *           int * len, will be written with the number of arguments, 
- * 
+ *
+ *           int * len, will be written with the number of arguments,
+ *
  *           int maxcopy, the max number of bytes to copy before returning E2BIG.
  *       Returns: 0 on success, error code on failure. possible error codes: E2BIG, EFAULT
  *       Postconditions: if return was successful, caller must call kfree(*dest)
@@ -350,7 +350,7 @@ copyoutstr(const char *src,  userptr_t userdest, size_t len, size_t *actual)
 int
 copyinstr_array(const userptr_t usersrc, char *** dest, int* len, size_t* got, int maxcopy) {
 
-        char** src = (char**) usersrc;
+	char** src = (char**) usersrc;
 
 	int err = 0;
 	/* running total number of bytes copied associated with dest string
@@ -475,39 +475,38 @@ copyinstr_array(const userptr_t usersrc, char *** dest, int* len, size_t* got, i
 		return err;
 	}
 
-        /* lastly, set up *dest to point to the strings in kstrings
-           note that i is equal to the end of dest + 1 (where 0 was) and that
-           dest currently contains lengths of strings, not the addresses of
-           them*/
+	/* lastly, set up *dest to point to the strings in kstrings
+	   note that i is equal to the end of dest + 1 (where 0 was) and that
+	   dest currently contains lengths of strings, not the addresses of
+	   them*/
 	s = 0; /* used as index into kstrings */
 	for (int j = 0; j < i; j++) {
-                int string_len = (int) (*dest)[j];
+		int string_len = (int) (*dest)[j];
 		(*dest)[j] = kstrings + s;
 		s += string_len;
 	}
 
 	*len = i;  /* excludes null terminator */
-	*got = addr_bytes_copied + string_bytes_copied; 
+	*got = addr_bytes_copied + string_bytes_copied;
 	return 0;
 }
-
 
 /*
  *     copyoutstr_array:
  *         this function safely copies 'size' data from char **src to userptr_t
  *         dest. When done, error is returned or dest contains len addresses
  *         pointing to null terminated strings following it
- *         
+ *
  *         Inputs:
- *             userptr_t userptr, the user address to write to  
- * 
+ *             userptr_t userptr, the user address to write to
+ *
  *             char** src, the array of strings addresses in to copy from, strings
  *             must start at src* and be contiguous in memory
- * 
+ *
  *             int len, the length of src[], excludin null terminator
- * 
+ *
  *             size_t size, the size of src in bytes (including strings & null-terminator)
- * 
+ *
  *         Returns: 0 on success, error code on failure. possible error codes: E2BIG, EFAULT
  */
 int
@@ -515,31 +514,31 @@ copyoutstr_array(const char ** src, userptr_t dest, int len, size_t size) {
 
 	int err = 0;
 
-        const char* src_stringbase = *src;                  /* null terminator */
-        userptr_t dest_stringbase = dest + len*sizeof(char*) + sizeof(char*) ; 
+	const char* src_stringbase = *src;                  /* null terminator */
+	userptr_t dest_stringbase = dest + len*sizeof(char*) + sizeof(char*) ;
 
-        /* copy out the addresses one by one since we need to first make sure to */
-        /* point to strings on the user stack, not in the kernel */
-        for (int i=0; i < len; i++) {
-                userptr_t dest_stringaddr =  dest_stringbase + (src[i] - src_stringbase);
-                err = copyout( &dest_stringaddr, dest + i*sizeof(char*),  sizeof(char*));
-                if (err) {
-                        return  err;
-                }
-        }
+	/* copy out the addresses one by one since we need to first make sure to */
+	/* point to strings on the user stack, not in the kernel */
+	for (int i=0; i < len; i++) {
+		userptr_t dest_stringaddr =  dest_stringbase + (src[i] - src_stringbase);
+		err = copyout( &dest_stringaddr, dest + i*sizeof(char*),  sizeof(char*));
+		if (err) {
+			return  err;
+		}
+	}
 
-        /* add null terminator */
-        char* null = 0;
-        err = copyout( &null, dest_stringbase - sizeof(char*),  sizeof(char*));
-        if (err) {
-                return  err;
-        }
+	/* add null terminator */
+	char* null = 0;
+	err = copyout( &null, dest_stringbase - sizeof(char*),  sizeof(char*));
+	if (err) {
+		return  err;
+	}
 
-        /* safe to copy the strings now */
-        err = copyout( *src,  dest_stringbase, size - (len*sizeof(char*) + sizeof(char*)));
-        if (err) {
-                return  err;
-        }
+	/* safe to copy the strings now */
+	err = copyout( *src,  dest_stringbase, size - (len*sizeof(char*) + sizeof(char*)));
+	if (err) {
+		return  err;
+	}
 
-        return 0;
+	return 0;
 }
