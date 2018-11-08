@@ -509,6 +509,5 @@ sys__exit(int exitcode) {
         /* I believe we need something like this */
         /* proc_destroy(curproc); */
 
-	(void)exitcode;
-	thread_exit();
+        thread_exit_destroy_proc();
 }

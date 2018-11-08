@@ -812,6 +812,45 @@ thread_exit(void)
 }
 
 /*
+ * Cause the current thread to exit.
+ *
+ * The parts of the thread structure we don't actually need to run
+ * should be cleaned up right away. The rest has to wait until
+ * thread_destroy is called from exorcise().
+ *
+ * Does not return.
+ */
+void
+thread_exit_destroy_proc(void)
+{
+	struct thread *cur;
+
+	cur = curthread;
+
+        struct proc* proc = curproc;
+
+	/*
+	 * Detach from our process. You might need to move this action
+	 * around, depending on how your wait/exit works.
+	 */
+	proc_remthread(cur);
+
+	/* Make sure we *are* detached (move this only if you're sure!) */
+	KASSERT(cur->t_proc == NULL);
+
+        proc_destroy(proc);
+
+
+	/* Check the stack guard band. */
+	thread_checkstack(cur);
+
+	/* Interrupts off on this processor */
+        splhigh();
+	thread_switch(S_ZOMBIE, NULL, NULL);
+	panic("braaaaaaaiiiiiiiiiiinssssss\n");
+}
+
+/*
  * Yield the cpu to another process, but stay runnable.
  */
 void
