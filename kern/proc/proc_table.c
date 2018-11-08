@@ -134,11 +134,11 @@ int proc_wait_on_pid(pid_t pid) {
         return p_table[pid]->pte_exit_status;
 }
 
-void proc_exit(pid_t proc, int status) {
-        struct proc_table_entry* entry = p_table[proc];
+void proc_exit(pid_t pid, int status) {
+        struct proc_table_entry* entry = p_table[pid];
         entry->pte_has_exited = true;
         entry->pte_exit_status = status;
-        cv_broadcast(entry->pte_waitpid_cv, pid_locks[proc]);
+        cv_broadcast(entry->pte_waitpid_cv, pid_locks[pid]);
 }
 bool proc_has_exited(pid_t pid) {
         return p_table[pid]->pte_has_exited;
