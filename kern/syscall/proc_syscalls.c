@@ -375,26 +375,21 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
 
         const pid_t curpid = curproc->p_pid;
 
-        KASSERT(curpid != INVALID_PID);
-
         pid_lock_acquire(curpid);
 
-        /* Create child process with proc_create */
-
-        const pid_t child_pid = reserve_pid(curpid);
-
-        struct proc* child_proc = proc_create(curproc->p_name, child_pid);
+        KASSERTM(proc_table_entry_exists(curpid), "pid %d", curpid);
 
 	/* Find an unused pid for the child */
-        /* const pid_t child_pid = reserve_pid(curpid); */
-        /* if (child_pid == INVALID_PID) { */
-        /*         pid_lock_release(curpid); */
-        /*         return ENPROC; */
-        /* } */
+        const pid_t child_pid = reserve_pid(curpid);
+        if (child_pid == INVALID_PID) {
+                pid_lock_release(curpid);
+                return ENPROC;
+        }
 
-        /* child_proc->p_pid = child_pid; */
+        DEBUG(DB_PROC_TABLE, "fork %d -> %d\n", curpid, child_pid);
 
-        KASSERT(proc_table_entry_exists(curpid));
+        /* Create child process with proc_create */
+        struct proc* child_proc = proc_create(curproc->p_name, child_pid);
 
         /* Add the child's pid to the parent's list of children */
         int error = proc_add_child(curpid, child_pid);
