@@ -28,9 +28,12 @@ proc_table_entry_create(pid_t pid, const pid_t parent_pid /* may be INVALID_PID 
 
 	struct proc_table_entry* pte = kmalloc(sizeof(struct proc_table_entry));
 
-	/* TODO: Better name for the CV */
-	(void)pid;
-	pte->pte_waitpid_cv = cv_create("");
+        {
+                char buf[64];
+                snprintf(buf, sizeof(buf), "waitpid_cv_%d", pid);
+                pte->pte_waitpid_cv = cv_create("");
+        }
+
 
 	array_init(&pte->pte_child_pids);
 
