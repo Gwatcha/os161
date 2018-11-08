@@ -68,15 +68,17 @@ proc_table_init() {
 void
 pid_lock_acquire(pid_t pid) {
         KASSERTM(!pid_lock_do_i_hold(pid), "pid %d", pid);
+
+        DEBUG(DB_PROC_TABLE, "acquiring pid lock %d\n", pid);
         lock_acquire(pid_locks[pid]);
-        DEBUG(DB_PROC_TABLE, "acquired pid_lock[%d]\n", pid);
+        DEBUG(DB_PROC_TABLE, "acquired pid lock %d\n", pid);
 }
 
 void
 pid_lock_release(pid_t pid) {
         KASSERTM(pid_lock_do_i_hold(pid), "pid %d", pid);
         lock_release(pid_locks[pid]);
-        DEBUG(DB_PROC_TABLE, "released pid_lock[%d]\n", pid);
+        DEBUG(DB_PROC_TABLE, "released pid lock %d\n", pid);
 }
 
 bool
