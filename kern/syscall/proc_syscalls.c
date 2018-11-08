@@ -59,7 +59,7 @@ int sys_execv(const char *program, char **argv) {
 	int err = 0;
 
 
-	 * DUMBVIM, this does nothing */
+	 /* * DUMBVIM, this does nothing */
 	struct addrspace * old_as = proc_getas();
 	struct addrspace * new_as = NULL; /* null for now */
         /* as_deactivate(); */
@@ -74,7 +74,7 @@ int sys_execv(const char *program, char **argv) {
 	int argc;
 	size_t kargv_size; 
 	char ** kargv;
-	err = copyinstr_array(argv, &kargv, &argc, &kargv_size, ARG_MAX);
+	err = copyinstr_array((userptr_t) argv, &kargv, &argc, &kargv_size, ARG_MAX);
 	if (err) {
 		/* no need deallocate kargv on copyinstr_array err  */
 		as_activate();
@@ -104,6 +104,8 @@ int sys_execv(const char *program, char **argv) {
 
 	proc_setas(new_as);
 	as_activate();
+
+        curthread->t_addrspace = as_new;
 
 	/*
 	 * Load new executable
@@ -152,7 +154,7 @@ int sys_execv(const char *program, char **argv) {
 	stackptr -= kargv_size;
 
         /* kargv into stackptr*/
-	err = copyoutstr_array( kargv, (userptr_t) stackptr, argc, kargv_size);
+	err = copyoutstr_array( (const char**) kargv, (userptr_t) stackptr, argc, kargv_size);
 	if (err) {
 		goto err;
 	}
