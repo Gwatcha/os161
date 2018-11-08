@@ -89,14 +89,16 @@ proc_table_entry_exists(pid_t pid) {
 }
 
 void remove_proc_table_entry(pid_t pid) {
-        KASSERT(proc_table_entry_exists(pid));
+        KASSERTM(pid_lock_do_i_hold(pid), "pid %d", pid);
+        KASSERTM(proc_table_entry_exists(pid), "pid %d", pid);
         proc_table_entry_destroy(p_table[pid]);
         p_table[pid] = NULL;
 }
 
 bool
 proc_has_child(pid_t parent, pid_t child) {
-	/* TODO: Maybe lock the parent */
+
+        KASSERTM(pid_lock_do_i_hold(parent), "pid %d", parent);
 
         const struct array* child_pids = &p_table[parent]->pte_child_pids;
 
