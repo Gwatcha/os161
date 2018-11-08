@@ -444,30 +444,28 @@ sys_waitpid(pid_t* retval, pid_t pid, int *status, int options) {
 	 * EFAULT  The status argument was an invalid pointer.
 	 */
 
+        *retval = pid;
+        *status = 0;
+
         /* TODO: use copy_in/copy_out */
         if (status == NULL) {
-                *retval = 0;
                 return EFAULT;
         }
 
         if (options != 0) {
-                *retval = 0;
                 return EINVAL;
         }
 
         if (!proc_table_entry_exists(pid)) {
-                *retval = 0;
                 return ESRCH;
         }
 
         pid_t curpid = curproc->p_pid;
 
-
         pid_lock_acquire(curpid);
         pid_lock_acquire(pid);
 
         if (!proc_has_child(curpid, pid)) {
-                *retval = 0;
                 return ECHILD;
         }
 
