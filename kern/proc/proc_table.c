@@ -55,8 +55,7 @@ proc_table_entry_destroy(struct proc_table_entry* pte) {
 void
 proc_table_init() {
 
-        /* TODO: come up with a better way of specifying that the kernel has pid 1 */
-	p_table[1] = proc_table_entry_create(1, INVALID_PID);
+	p_table[PID_KERN] = proc_table_entry_create(PID_KERN, INVALID_PID);
 
         for (pid_t i = 0; i < __PID_MAX; ++i) {
                 char buf[64];

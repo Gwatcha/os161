@@ -74,6 +74,9 @@
  */
 
 /* Min value for a process ID (that can be assigned to a user process) */
+#define __PID_KERN      1
+
+/* Min value for a process ID (that can be assigned to a user process) */
 #define __PID_MIN       2
 
 /* Max value for a process ID (change this to match your implementation) */
