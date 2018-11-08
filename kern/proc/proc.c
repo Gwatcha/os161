@@ -158,23 +158,6 @@ proc_create(const char *name, pid_t pid)
         /* Initialize the pid */
         KASSERT(proc_table_entry_exists(pid));
         proc->p_pid = pid;
-        /* reserve_pid(parent_pid); */
-
-        /* kprintf("Reserve pid %d -> %d\n", parent_pid, proc->p_pid); */
-        /* proc->p_pid = 1; */
-        /* (void)parent_pid; */
-
-        /* TODO Open stdin, stdout, and stderr  */
-        /* open_console(proc, STDIN_FILENO, O_RDONLY); */
-        /* open_console(proc, STDOUT_FILENO, O_WRONLY); */
-        /* open_console(proc, STDERR_FILENO, O_WRONLY); */
-        /*
-        proc->p_file_table[0] = ?
-        proc->p_file_table[1] = ?
-        proc->p_file_table[2] = ?
-        */
-
-        
 
 	return proc;
 }
