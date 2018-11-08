@@ -475,7 +475,7 @@ sys_waitpid(pid_t* retval, pid_t pid, int *status, int options) {
                 return ECHILD;
         }
 
-        const int exit_status = proc_wait_on_child(curpid, pid);
+        const int exit_status = proc_wait_on_pid(pid);
         if (status != NULL) {
                 *status = exit_status;
         }

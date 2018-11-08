@@ -126,14 +126,13 @@ pid_t proc_get_parent(pid_t pid) {
         return p_table[pid]->pte_parent_pid;
 }
 
-/* Returns the exit status of the child */
-int proc_wait_on_child(pid_t parent_pid, pid_t child_pid) {
+/* Returns the exit status of the process */
+int proc_wait_on_pid(pid_t pid) {
 
-        (void)parent_pid;
-        if (!proc_has_exited(child_pid)) {
-                cv_wait(p_table[child_pid]->pte_waitpid_cv, pid_locks[child_pid]);
+        if (!proc_has_exited(pid)) {
+                cv_wait(p_table[pid]->pte_waitpid_cv, pid_locks[pid]);
         }
-        return p_table[child_pid]->pte_exit_status;
+        return p_table[pid]->pte_exit_status;
 }
 
 void proc_exit(pid_t proc, int status) {
