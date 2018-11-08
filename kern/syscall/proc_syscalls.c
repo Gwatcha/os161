@@ -105,7 +105,8 @@ int sys_execv(const char *program, char **argv) {
 	proc_setas(new_as);
 	as_activate();
 
-        curthread->t_addrspace = as_new;
+        /* TODO */
+        /* curthread->t_addrspace = as_new; */
 
 	/*
 	 * Load new executable
