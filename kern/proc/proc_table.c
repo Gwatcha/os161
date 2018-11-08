@@ -126,6 +126,14 @@ pid_t proc_get_parent(pid_t pid) {
         return p_table[pid]->pte_parent_pid;
 }
 
+void proc_wait_on_child(pid_t parent_pid, pid_t child_pid) {
+
+        (void)parent_pid;
+        if (proc_has_exited(child_pid)) {
+
+        }
+}
+
 void proc_exit(pid_t proc, int status) {
         p_table[proc]->pte_has_exited = true;
         p_table[proc]->pte_exit_status = status;
