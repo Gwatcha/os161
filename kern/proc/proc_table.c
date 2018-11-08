@@ -36,6 +36,7 @@ proc_table_entry_create(pid_t pid, const pid_t parent_pid /* may be INVALID_PID 
 
 	pte->pte_parent_pid = parent_pid;
 	pte->pte_has_exited = false;
+	pte->pte_exit_status = 0;
 
 	return pte;
 }
