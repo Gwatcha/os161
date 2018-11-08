@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009
- *	The President and Fellows of Harvard College.
+ *  The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -68,6 +68,9 @@ int copyin(const_userptr_t usersrc, void *dest, size_t len);
 int copyout(const void *src, userptr_t userdest, size_t len);
 int copyinstr(const_userptr_t usersrc, char *dest, size_t len, size_t *got);
 int copyoutstr(const char *src, userptr_t userdest, size_t len, size_t *got);
+
+int copyinstr_array(char ** user_ptr, char *** kbuff, int* len, size_t* got, int maxcopy);
+int copyoutstr_array(char ** src, userptr_t dest, int len, size_t size);
 
 
 #endif /* _COPYINOUT_H_ */

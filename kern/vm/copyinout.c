@@ -337,7 +337,7 @@ copyoutstr(const char *src, userptr_t userdest, size_t len, size_t *actual)
  *           memory associated with kbuff, may have size larger
  *           than maxcopy
  * 
- *           int * argc, will be written with the number of arguments, 
+ *           int * len, will be written with the number of arguments, 
  * 
  *           int maxcopy, the max number of bytes to copy before returning E2BIG.
  *       Returns: 0 on success, error code on failure. possible error codes: E2BIG, EFAULT
@@ -346,7 +346,7 @@ copyoutstr(const char *src, userptr_t userdest, size_t len, size_t *actual)
  *                       unsucessful, caller is to discard kbuff.
  */
 int
-copyinstr_array(char ** user_ptr, char *** kbuff, int* argc, size_t* kargv_size, int maxcopy) {
+copyinstr_array(char ** user_ptr, char *** kbuff, int* len, size_t* got, int maxcopy) {
 
 	int err = 0;
 	/* running total number of bytes copied associated with kbuff string
@@ -474,15 +474,64 @@ copyinstr_array(char ** user_ptr, char *** kbuff, int* argc, size_t* kargv_size,
 		return err;
 	}
 
-	/* lastly, set up *kbuff to point to the strings in kstrings
-	   note that i is equal to the end of kbuff + 1 (where 0 was)*/
+        /* lastly, set up *kbuff to point to the strings in kstrings
+           note that i is equal to the end of kbuff + 1 (where 0 was) and that
+           kbuff currently contains lengths of strings, not the addresses of
+           them*/
 	s = 0; /* used as index into kstrings */
 	for (int j = 0; j < i; j++) {
+                int string_len = (int) (*kbuff)[j];
 		(*kbuff)[j] = kstrings + s;
-		s += (int) (*kbuff)[j]; /* both 32 bits */
+		s += string_len;
 	}
 
-	*argc = i; 
-	*kargv_size = addr_bytes_copied + string_bytes_copied; 
+	*len = i; 
+	*got = addr_bytes_copied + string_bytes_copied; 
 	return 0;
+}
+
+
+/*
+ *     copyoutstr_array:
+ *         this function safely copies 'size' data from char **src to userptr_t
+ *         dest. When done, error is returned or dest contains len addresses
+ *         pointing to null terminated strings following it
+ *         
+ *         Inputs:
+ *             userptr_t userptr, the user address to write to  
+ * 
+ *             char** src, the array of strings addresses in to copy from, strings
+ *             must start at src* and be contiguous
+ * 
+ *             int len, the length of src[] 
+ * 
+ *             size_t size, the size of src in bytes (including strings)
+ * 
+ *         Returns: 0 on success, error code on failure. possible error codes: E2BIG, EFAULT
+ */
+int
+copyoutstr_array(char ** src, userptr_t dest, int len, size_t size) {
+
+	int err = 0;
+
+        char* src_stringbase = *src;
+        userptr_t dest_stringbase = dest + len*sizeof(char*);
+
+        /* copy out the addresses one by one since we need to first make sure to */
+        /* point to strings on the user stack, not in the kernel */
+        for (int i=0; i < len; i++) {
+                userptr_t dest_stringaddr =  dest_stringbase + (src[i] - src_stringbase);
+                err = copyout( &dest_stringaddr, dest + i*sizeof(char*),  sizeof(char*));
+                if (err) {
+                        return  err;
+                }
+        }
+
+        // safe to copy the strings now
+        err = copyout( *src,  dest_stringbase, size - (len*sizeof(char*)));
+        if (err) {
+                return  err;
+        }
+
+        return 0;
 }

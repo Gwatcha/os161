@@ -152,21 +152,11 @@ int sys_execv(const char *program, char **argv) {
 
 	stackptr -= kargv_size;
 
-        /* copy pointers */
-	err = copyout( kargv, (userptr_t) stackptr, sizeof(char*)*argc);
+        /* kargc into stackptr*/
+	err = copyoutstr_array( kargv, (userptr_t) stackptr, argc, kargv_size);
 	if (err) {
 		goto err;
 	}
-
-        /* TODO FIXME */
-        /* copy arguments */
-        /* for (int i = 0; i < argc; i++) { */
-        /*         err = copyout( kargv[i], (userptr_t) stackptr + , ); */
-        /*         if (err) { */
-        /*                 goto err; */
-        /*         } */
-        /* } */
-
 
 	/*
 	 * Clean up old address space
