@@ -58,11 +58,11 @@ int sys_execv(const char *program, char **argv) {
 
 	int err = 0;
 
-	/* deactivate address space since it will be in a volatile state, in
+
 	 * DUMBVIM, this does nothing */
 	struct addrspace * old_as = proc_getas();
 	struct addrspace * new_as = NULL; /* null for now */
-	as_deactivate();
+        /* as_deactivate(); */
 
 	/* ---------------------------------------------------------------- */
 
@@ -88,14 +88,13 @@ int sys_execv(const char *program, char **argv) {
 		goto err;
 	}
 
-
 	/*
 	 * 2. Create new address space
 	 */
 
 	new_as = as_create();
 	if (new_as == NULL) {
-		err = ENOMEM;
+                err = ENOMEM;
 		goto err;
 	}
 
@@ -139,20 +138,20 @@ int sys_execv(const char *program, char **argv) {
 		goto err;
 	}
 
-	/*
-	 * Copy arguments to new address space, properly arranging them.
-	 * Arguments are pointers in registers into user space.
-	 *         - a0: argc
-	 *         - a1: char** pointer that points to a string array of length argc
-	 * we chose to store argc and the program name on the stack, so first
-	 * we need to make space on it. Since the stackpointer is subtract then
-	 * store, it is currently at the highest address + 1 in the stack
-	 * pointer area, so we just subtract the number of bytes read from userspace.
-	 */
+        /*
+         * Copy arguments to new address space, properly arranging them.
+         * Arguments are pointers in registers into user space.
+         *         - a0: argc
+         *         - a1: char** pointer that points to a string array of length argc
+         * we chose to store argc and the program name on the stack, so first
+         * we need to make space on it. Since the stackpointer is subtract then
+         * store, it is currently at the highest address + 1 in the stack
+         * pointer area, so we just subtract the number of bytes read from userspace.
+         */
 
 	stackptr -= kargv_size;
 
-        /* kargc into stackptr*/
+        /* kargv into stackptr*/
 	err = copyoutstr_array( kargv, (userptr_t) stackptr, argc, kargv_size);
 	if (err) {
 		goto err;
