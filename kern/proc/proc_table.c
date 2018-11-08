@@ -6,7 +6,8 @@
 #include "synch.h"
 
 struct proc_table_entry {
-	struct cv* pte_waitpid_cv;
+	/* struct cv* pte_waitpid_cv; */
+        struct lock* pte_waitpid_lock;
 	struct array pte_child_pids;
 	pid_t pte_parent_pid;
 	bool pte_has_exited;
@@ -30,7 +31,12 @@ proc_table_entry_create(pid_t pid, const pid_t parent_pid /* may be INVALID_PID 
 
 	/* TODO: Better name for the CV */
 	(void)pid;
-	pte->pte_waitpid_cv = cv_create("");
+	/* pte->pte_waitpid_cv = cv_create(""); */
+	pte->pte_waitpid_lock = lock_create("");
+
+        if (p_table[1] != NULL) {
+                lock_acquire(pte->pte_waitpid_lock);
+        }
 
 	array_init(&pte->pte_child_pids);
 
@@ -44,7 +50,8 @@ proc_table_entry_create(pid_t pid, const pid_t parent_pid /* may be INVALID_PID 
 static
 void
 proc_table_entry_destroy(struct proc_table_entry* pte) {
-	cv_destroy(pte->pte_waitpid_cv);
+	/* cv_destroy(pte->pte_waitpid_cv); */
+	lock_destroy(pte->pte_waitpid_lock);
 
 	array_setsize(&pte->pte_child_pids, 0);
 	array_cleanup(&pte->pte_child_pids);
@@ -131,15 +138,20 @@ int proc_wait_on_child(pid_t parent_pid, pid_t child_pid) {
 
         (void)parent_pid;
         if (!proc_has_exited(child_pid)) {
-                cv_wait(p_table[child_pid]->pte_waitpid_cv, pid_locks[child_pid]);
+                lock_acquire(p_table[child_pid]->pte_waitpid_lock);
+                kprintf("acq %d\n", child_pid);
         }
         return p_table[child_pid]->pte_exit_status;
 }
 
 void proc_exit(pid_t proc, int status) {
-        p_table[proc]->pte_has_exited = true;
-        p_table[proc]->pte_exit_status = status;
-        cv_broadcast(p_table[proc]->pte_waitpid_cv, pid_locks[proc]);
+        struct proc_table_entry* entry = p_table[proc];
+        entry->pte_has_exited = true;
+        entry->pte_exit_status = status;
+
+        lock_release(entry->pte_waitpid_lock);
+
+        kprintf("rel %d\n", proc);
 }
 bool proc_has_exited(pid_t pid) {
         return p_table[pid]->pte_has_exited;
