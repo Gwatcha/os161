@@ -466,14 +466,12 @@ sys_waitpid(pid_t* retval, pid_t pid, int *status, int options) {
 
         pid_t curpid = curproc->p_pid;
 
-        pid_lock_acquire(curpid);
         DEBUG(DB_PROC_TABLE, "wait %d on %d\n", curpid, pid);
 
         pid_lock_acquire(pid);
 
         if (!proc_has_child(curpid, pid)) {
                 pid_lock_release(pid);
-                pid_lock_release(curpid);
                 return ECHILD;
         }
 
@@ -483,7 +481,6 @@ sys_waitpid(pid_t* retval, pid_t pid, int *status, int options) {
         }
 
         pid_lock_release(pid);
-        pid_lock_release(curpid);
 
         DEBUG(DB_PROC_TABLE, "done wait %d on %d\n", curpid, pid);
 
