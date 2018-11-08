@@ -444,13 +444,17 @@ sys_waitpid(pid_t* retval, pid_t pid, int *status, int options) {
 	 * EFAULT  The status argument was an invalid pointer.
 	 */
 
-        *retval = pid;
-        *status = 0;
+        if (retval != NULL) {
+                *retval = pid;
+        }
+        if (status != NULL) {
+                *status = 0;
+        }
 
         /* TODO: use copy_in/copy_out */
-        if (status == NULL) {
-                return EFAULT;
-        }
+        /* if (status is invalid) { */
+        /*         return EFAULT; */
+        /* } */
 
         if (options != 0) {
                 return EINVAL;
@@ -471,7 +475,10 @@ sys_waitpid(pid_t* retval, pid_t pid, int *status, int options) {
                 return ECHILD;
         }
 
-        *status = proc_wait_on_child(curpid, pid);
+        const int exit_status = proc_wait_on_child(curpid, pid);
+        if (status != NULL) {
+                *status = exit_status;
+        }
 
         pid_lock_release(pid);
         pid_lock_release(curpid);
