@@ -812,6 +812,7 @@ thread_exit(void)
 }
 
 /*
+ * TODO: Reduce duplication, very similar to thread_exit above
  * Cause the current thread to exit.
  *
  * The parts of the thread structure we don't actually need to run
