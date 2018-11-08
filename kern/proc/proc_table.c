@@ -147,7 +147,7 @@ bool proc_has_exited(pid_t pid) {
 /* Returns INVALID_PID if a pid cannot be reserved */
 pid_t
 reserve_pid(pid_t parent_pid /* may be INVALID_PID */) {
-	for (pid_t pid = 1; pid < __PID_MAX; ++pid) {
+	for (pid_t pid = PID_MIN; pid < __PID_MAX; ++pid) {
 
                 if (pid == parent_pid) {
                         /* Avoid deadlocking on our own lock */
