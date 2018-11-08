@@ -11,7 +11,6 @@ struct proc_table_entry {
 	pid_t pte_parent_pid;
 	bool pte_has_exited;
 	int pte_exit_status;
-	/* int pte_refcount; */
 };
 
 
