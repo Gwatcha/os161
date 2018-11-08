@@ -45,14 +45,13 @@
 #include <types.h>
 #include <spl.h>
 #include <proc.h>
+#include <proc_table.h>
 #include <current.h>
 #include <addrspace.h>
 #include <vnode.h>
 #include <vfs.h>
 #include <kern/unistd.h>
 #include <kern/fcntl.h>
-
-#include <syscall.h>
 
 /*
  * The process for the kernel; this holds all the kernel-only threads.
@@ -127,9 +126,8 @@ open_console(struct proc* p, int fd, int flags) {
 /*
  * Create a proc structure.
  */
-static
 struct proc *
-proc_create(const char *name)
+proc_create(const char *name, pid_t pid)
 {
 	struct proc *proc;
 
@@ -158,19 +156,8 @@ proc_create(const char *name)
         }
 
         /* Initialize the pid */
-        proc->p_pid = 1;
-
-        /* TODO Open stdin, stdout, and stderr  */
-        /* open_console(proc, STDIN_FILENO, O_RDONLY); */
-        /* open_console(proc, STDOUT_FILENO, O_WRONLY); */
-        /* open_console(proc, STDERR_FILENO, O_WRONLY); */
-        /*
-        proc->p_file_table[0] = ?
-        proc->p_file_table[1] = ?
-        proc->p_file_table[2] = ?
-        */
-
-        
+        KASSERT(proc_table_entry_exists(pid));
+        proc->p_pid = pid;
 
 	return proc;
 }
@@ -268,12 +255,13 @@ proc_destroy(struct proc *proc)
 void
 proc_bootstrap(void)
 {
-	kproc = proc_create("[kernel]");
+        /* TODO: come up with a better way of specifying that the kernel has pid 1 */
+        proc_table_init();
+	kproc = proc_create("[kernel]", 1);
 	if (kproc == NULL) {
 		panic("proc_create for kproc failed\n");
 	}
-        kproc->p_pid = 1;
-        create_first_proc_table_entry();
+        /* kproc->p_pid = 1; */
 }
 
 /*
@@ -287,7 +275,7 @@ proc_create_runprogram(const char *name)
 {
 	struct proc *newproc;
 
-	newproc = proc_create(name);
+	newproc = proc_create(name, reserve_pid(INVALID_PID));
 	if (newproc == NULL) {
 		return NULL;
 	}
