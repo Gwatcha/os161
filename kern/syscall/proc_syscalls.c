@@ -452,10 +452,11 @@ sys__exit(int exitcode) {
 
 	const pid_t curpid = curproc->p_pid;
 
+        DEBUG(DB_PROC_TABLE, "exit %d\n", curpid);
 
-        const pid_t parent_pid = proc_get_parent(curpid);
 	KASSERTM(proc_table_entry_exists(curpid), "pid %d", curpid);
 
+        const pid_t parent_pid = proc_get_parent(curpid);
         if (parent_pid != INVALID_PID) {
                 pid_lock_acquire(parent_pid);
         }
@@ -469,6 +470,8 @@ sys__exit(int exitcode) {
 
 		pid_t child_pid = (pid_t)array_get(child_pids, i);
 
+                DEBUG(DB_PROC_TABLE, "%d examining child %d\n", curpid, child_pid);
+
                 pid_lock_acquire(child_pid);
 
 		/* child's proc table entry should exist until its parent exits */
@@ -479,30 +482,54 @@ sys__exit(int exitcode) {
 
                 if (proc_has_exited(child_pid)) {
 
+                        DEBUG(DB_PROC_TABLE, "remove_proc_table_entry(%d) - child\n", child_pid);
                         remove_proc_table_entry(child_pid);
                 }
 
                 pid_lock_release(child_pid);
         }
 
-	if (parent_pid != INVALID_PID &&
-            proc_table_entry_exists(parent_pid) &&
-            !proc_has_exited(parent_pid) &&
-            proc_has_child(parent_pid, curpid)) {
+        proc_exit(curpid, exitcode);
 
-		/* If parent has not exited, cannot destroy this entry */
-                proc_exit(curpid, exitcode);
-        }
-        else {
-		remove_proc_table_entry(curpid); /* FIXME: kernel panics here! */
+        enum parent_status {
+                ps_invalid,
+                ps_no_entry,
+                ps_has_exited,
+                ps_pid_recycled,
+                ps_alive,
+                ps_count
+        };
+
+        enum parent_status pstatus =
+                parent_pid == INVALID_PID               ? ps_invalid :
+                !proc_table_entry_exists(parent_pid)    ? ps_no_entry :
+                proc_has_exited(parent_pid)             ? ps_has_exited :
+                !proc_has_child(parent_pid, curpid)     ? ps_pid_recycled :
+                                                          ps_alive;
+
+        if (pstatus != ps_alive) {
+
+                /* Destroy this entry; there is no living parent that may call waitpid */
+		remove_proc_table_entry(curpid);
+
+                const char* db_format[ps_count] = {
+                        "remove_proc_table_entry(%d), parent %d is invalid\n",
+                        "remove_proc_table_entry(%d), parent %d has no entry\n",
+                        "remove_proc_table_entry(%d), parent %d has exited\n",
+                        "remove_proc_table_entry(%d), parent %d has been recycled\n",
+                        NULL
+                };
+
+                DEBUG(DB_PROC_TABLE, db_format[pstatus], curpid, parent_pid);
         }
 
         pid_lock_release(curpid);
         if (parent_pid != INVALID_PID) {
                 pid_lock_release(parent_pid);
         }
-        /* I believe we need something like this */
-        /* proc_destroy(curproc); */
+
+        /* Print in reverse (easy way to tell where the call began and ended) */
+        DEBUG(DB_PROC_TABLE, "%d exit\n", curpid);
 
         thread_exit_destroy_proc();
 }
