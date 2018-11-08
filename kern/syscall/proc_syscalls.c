@@ -471,7 +471,7 @@ sys_waitpid(pid_t* retval, pid_t pid, int *status, int options) {
                 return ECHILD;
         }
 
-        proc_wait_on_child(curpid, pid);
+        *status = proc_wait_on_child(curpid, pid);
 
         pid_lock_release(pid);
         pid_lock_release(curpid);
