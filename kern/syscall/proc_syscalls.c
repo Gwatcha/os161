@@ -87,6 +87,12 @@ int sys_execv(const char *program, char **argv) {
                 goto err;
         }
 
+        /* if we just get a null terminator.. */
+        if (got == 1) {
+                err = EISDIR;
+                goto err;
+        }
+
         /*
          * 2. Create new address space
          */

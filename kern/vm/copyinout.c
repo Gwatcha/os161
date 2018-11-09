@@ -569,7 +569,9 @@ copyoutstr_array(const char ** src, userptr_t dest, size_t size) {
         }
 
         /* safe to copy the strings now */
-        err = copyout( src_stringbase,  dest_stringbase, size - (argc*sizeof(char*) + sizeof(char*) + sizeof(int)));
+        err = copyout( src_stringbase,  dest_stringbase, size -
+                        (argc*sizeof(char*) + sizeof(char*) + sizeof(int)));
+
         if (err) {
                 return  err;
         }
