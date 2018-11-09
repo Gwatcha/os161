@@ -44,7 +44,7 @@ enter_forked_process_wrapper(void* data1, unsigned long data2) {
 int sys_execv(const char *program, char **argv) {
 
         /*
-         * May return these errors:
+         * Possible Errors:
          * ENODEV       The device prefix of program did not exist.
          * ENOTDIR      A non-final component of program was not a directory.
          * ENOENT       program did not exist.
@@ -67,7 +67,7 @@ int sys_execv(const char *program, char **argv) {
         /* ---------------------------------------------------------------- */
 
         /*
-         * 1. Copy arguments (argv) into a kernel buffer, kargv, and program
+         * Copy arguments (argv) into a kernel buffer, kargv, and program
          * name into kprogram
          */
 
@@ -94,7 +94,7 @@ int sys_execv(const char *program, char **argv) {
         }
 
         /*
-         * 2. Create new address space
+         * Create new address space
          */
 
         new_as = as_create();
@@ -144,21 +144,15 @@ int sys_execv(const char *program, char **argv) {
         }
 
         /*
-         * Copy arguments to new address space, properly arranging them.
-         * Arguments are pointers in registers into user space.
-         *         - a0: argc
-         *         - a1: char** pointer that points to a string array of length argc
-         * we chose to store argc and the program name on the stack, so first
-         * we need to make space on it. Since the stackpointer is subtract then
-         * store, it is currently at the highest address + 1 in the stack
-         * pointer area, so we just subtract the number of bytes read from userspace.
+         * Copy kargc onto the user stack.
          */
 
         KASSERT(kargv_size % 4 == 0);
         stackptr -= kargv_size;
-        stackptr += 4;  /* we don't need to argc count in kargv[0] */
+        stackptr += 4;  /* user dosen't need the argc count in kargv[0] */
 
-        /* kargv into stackptr*/
+        /* copyoutstr_array handles copying as well as fixing the string
+        address pointers for us. */
         err = copyoutstr_array( (const char**) kargv, (userptr_t) stackptr, kargv_size);
         if (err) {
                 goto err;
@@ -171,7 +165,7 @@ int sys_execv(const char *program, char **argv) {
         as_destroy(old_as); /* the point of no return...  */
 
         /*
-         * 8. Warp to user mode
+         * Warp to user mode
          */
 
         int argc = ((int) kargv[0]);
@@ -204,7 +198,7 @@ err:
 int
 sys_fork(pid_t* retval, struct trapframe* trapframe) {
 
-        /* Errors:
+        /* Possible Errors:
          * EMPROC  The current user already has too many processes.
          * ENPROC  There are already too many processes on the system.
          * ENOMEM  Sufficient virtual memory for the new process was not available.

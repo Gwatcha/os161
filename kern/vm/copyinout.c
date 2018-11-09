@@ -537,7 +537,7 @@ copyinstr_array(const userptr_t usersrc, char* *dest[], size_t* got, int maxcopy
  *             strings must start at src* and be contiguous in memory, the
  *             number of strings, n, must be stored in src[0]. and src[n] = 0
  *
- *             size_t size, the size of src in bytes (including strings & null-terminator)
+ *             size_t size, the total size of src in bytes (including everything)
  *
  *         Returns: 0 on success, error code on failure. possible error codes: E2BIG, EFAULT
  */
@@ -569,7 +569,7 @@ copyoutstr_array(const char ** src, userptr_t dest, size_t size) {
 
         /* safe to copy the strings now */
         err = copyout( src_stringbase,  dest_stringbase, size -
-                        (argc*sizeof(char*) + sizeof(char*) + sizeof(int)));
+                        (sizeof(int) + argc*sizeof(char*) + sizeof(char*)));
 
         if (err) {
                 return  err;
