@@ -291,14 +291,6 @@ sys_waitpid(pid_t* retval, pid_t pid, int *status, int options) {
         if (retval != NULL) {
                 *retval = pid;
         }
-        if (status != NULL) {
-                *status = 0;
-        }
-
-        /* TODO: use copy_in/copy_out */
-        /* if (status is invalid) { */
-        /*         return EFAULT; */
-        /* } */
 
         if (options != 0) {
                 return EINVAL;
@@ -331,17 +323,17 @@ sys_waitpid(pid_t* retval, pid_t pid, int *status, int options) {
          */
 
         pid_lock_acquire(pid);
-
         const int exit_status = proc_wait_on_pid(pid);
-        if (status != NULL) {
-                *status = exit_status;
-        }
-
         pid_lock_release(pid);
+
+        int error = 0;
+        if (status != NULL) {
+                error = copyout(&exit_status, (userptr_t)status, sizeof(int));
+        }
 
         DEBUG(DB_PROC_TABLE, "done wait %d on %d\n", curpid, pid);
 
-	return 0;
+	return error;
 }
 
 void
