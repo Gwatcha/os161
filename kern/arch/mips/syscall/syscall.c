@@ -82,152 +82,148 @@
 void
 syscall(struct trapframe *tf)
 {
-	int callno;
-	int32_t retval; 
-	int err;
+        int callno;
+        int32_t retval; 
+        int err;
 
-	KASSERT(curthread != NULL);
-	KASSERT(curthread->t_curspl == 0);
-	KASSERT(curthread->t_iplhigh_count == 0);
+        KASSERT(curthread != NULL);
+        KASSERT(curthread->t_curspl == 0);
+        KASSERT(curthread->t_iplhigh_count == 0);
 
-	callno = tf->tf_v0;
+        callno = tf->tf_v0;
 
-	/*
-	 * Initialize retval to 0. Many of the system calls don't
-	 * really return a value, just 0 for success and -1 on
-	 * error. Since retval is the value returned on success,
-	 * initialize it to 0 by default; thus it's not necessary to
-	 * deal with it except for calls that return other values,
-	 * like write.
-	 */
+        /*
+         * Initialize retval to 0. Many of the system calls don't
+         * really return a value, just 0 for success and -1 on
+         * error. Since retval is the value returned on success,
+         * initialize it to 0 by default; thus it's not necessary to
+         * deal with it except for calls that return other values,
+         * like write.
+         */
 
-	retval = 0;
-
-
-	/*
-	 * This switch stament is responsible for calling the syscall given the
-	 * callno and mediating between the system call and the input/output API
-	 * for syscalls, which may be complicated due to 32 bit register
-	 * complications (eg. lseek has some parameters on user stack)
-	 */
-	
-	switch (callno) {
-	    case SYS_reboot:
-		err = sys_reboot(tf->tf_a0);
-		break;
-
-	    case SYS___time:
-		err = sys___time((userptr_t)tf->tf_a0,
-				 (userptr_t)tf->tf_a1);
-		break;
-
-		/*
-		 * fd related syscalls
-		 */
-
-		case SYS_open:
-			err = sys_open(&retval, (char*)tf->tf_a0, (int)tf->tf_a1);
-			break;
-		case SYS_read:
-			err = sys_read(&retval, (int)tf->tf_a0, (void*)tf->tf_a1, (size_t)tf->tf_a2);
-			break;
-
-		case SYS_write:
-			err = sys_write(&retval, (int)tf->tf_a0, (void*)tf->tf_a1, (size_t)tf->tf_a2);
-			break;
-
-		case SYS_lseek: 
-		{
-			/* kwhence is on the user stack, so we must copy it in */
-			int kwhence;
-			copyin((userptr_t) (tf->tf_sp + 16), &kwhence, 4); 
-
-			/* now we join 2 32bit registers, a2 & a3, which represent the 64bit value offset */
-			off_t kpos = ((off_t) tf->tf_a2 << 32) | ((off_t) tf->tf_a3);
-
-			/* our return value is 64 bits as well, so we need to store it in v0 and v1 */
-			/* the wrap up code handles v0 for us, we need to store v1. */
-			off_t retval_ext;
-			err = sys_lseek(&retval_ext, (int)tf->tf_a0, kpos, kwhence);
-
-			retval = (int32_t) ((retval_ext) >> 32);
-			tf->tf_v1 = (int32_t) (retval_ext & 0x00000000ffffffff);
-
-			break;
-		}
-		case SYS_close:
-			err = sys_close((int)tf->tf_a0);
-			break;
-
-		case SYS_dup2:
-			err = sys_dup2(&retval, (int)tf->tf_a0, (int)tf->tf_a1);
-			break;
-
-		case SYS_chdir:
-			err = sys_chdir((char*)tf->tf_a0);
-			break;
-
-		case SYS___getcwd:
-			err = sys___getcwd(&retval, (char*)tf->tf_a0, (size_t)tf->tf_a1);
-			break;
-
-		/*
-		 * Process related syscalls
-		 */
-
-		case SYS_fork: /* parent returns here */
-                        err = sys_fork(&retval, tf);
-			break;
-
-		case SYS_execv: 
-			err = sys_execv((const char*)tf->tf_a0, (char **)tf->tf_a1); 
-			break;
-
-		case SYS__exit:
-                        sys__exit((int)tf->tf_a0);
-			break;
-
-		case SYS_waitpid:
-			err = sys_waitpid(&retval, (pid_t)tf->tf_a0, (int *)tf->tf_a1, (int)tf->tf_a2);
-			break;
-
-		case SYS_getpid:
-			err = sys_getpid(&retval);
-			break;
-
-	    default:
-		kprintf("Unknown syscall %d\n", callno);
-		err = ENOSYS;
-		break;
-	}
+        retval = 0;
 
 
-	if (err) {
-		/*
-		 * Return the error code. This gets converted at
-		 * userlevel to a return value of -1 and the error
-		 * code in errno.
-		 */
-		tf->tf_v0 = err;
-		tf->tf_a3 = 1;      /* signal an error */
-	}
-	else {
-		/* Success. */
-		tf->tf_v0 = retval;
-		tf->tf_a3 = 0;      /* signal no error */
-	}
+        /*
+         * This switch stament is responsible for calling the syscall given the
+         * callno and mediating between the system call and the input/output API
+         * for syscalls, which may be complicated due to 32 bit register
+         * complications (eg. lseek has some parameters on user stack)
+         */
 
-	/*
-	 * Now, advance the program counter, to avoid restarting
-	 * the syscall over and over again.
-	 */
+        switch (callno) {
+            case SYS_reboot:
+                err = sys_reboot(tf->tf_a0);
+                break;
 
-	tf->tf_epc += 4;
+            case SYS___time:
+                err = sys___time((userptr_t)tf->tf_a0,
+                                 (userptr_t)tf->tf_a1);
+                break;
 
-	/* Make sure the syscall code didn't forget to lower spl */
-	KASSERT(curthread->t_curspl == 0);
-	/* ...or leak any spinlocks */
-	KASSERT(curthread->t_iplhigh_count == 0);
+            /* fd related syscalls */
+            case SYS_open:
+                err = sys_open(&retval, (char*)tf->tf_a0, (int)tf->tf_a1);
+                break;
+            case SYS_read:
+                err = sys_read(&retval, (int)tf->tf_a0, (void*)tf->tf_a1, (size_t)tf->tf_a2);
+                break;
+
+            case SYS_write:
+                err = sys_write(&retval, (int)tf->tf_a0, (void*)tf->tf_a1, (size_t)tf->tf_a2);
+                break;
+
+            case SYS_lseek: {
+                    /* kwhence is on the user stack, so we must copy it in */
+                    int kwhence;
+                    copyin((userptr_t) (tf->tf_sp + 16), &kwhence, 4); 
+
+                    /* now we join 2 32bit registers, a2 & a3, which represent the 64bit value offset */
+                    off_t kpos = ((off_t) tf->tf_a2 << 32) | ((off_t) tf->tf_a3);
+
+                    /* our return value is 64 bits as well, so we need to store it in v0 and v1 */
+                    /* the wrap up code handles v0 for us, we need to store v1. */
+                    off_t retval_ext;
+                    err = sys_lseek(&retval_ext, (int)tf->tf_a0, kpos, kwhence);
+
+                    retval = (int32_t) ((retval_ext) >> 32);
+                    tf->tf_v1 = (int32_t) (retval_ext & 0x00000000ffffffff);
+
+                    break;
+            }
+            case SYS_close:
+                err = sys_close((int)tf->tf_a0);
+                break;
+
+            case SYS_dup2:
+                err = sys_dup2(&retval, (int)tf->tf_a0, (int)tf->tf_a1);
+                break;
+
+            case SYS_chdir:
+                err = sys_chdir((char*)tf->tf_a0);
+                break;
+
+            case SYS___getcwd:
+                err = sys___getcwd(&retval, (char*)tf->tf_a0, (size_t)tf->tf_a1);
+                break;
+
+                /*
+                 * Process related syscalls
+                 */
+
+            case SYS_fork: /* parent returns here */
+                err = sys_fork(&retval, tf);
+                break;
+
+            case SYS_execv:
+                err = sys_execv((const char*)tf->tf_a0, (char **)tf->tf_a1);
+                break;
+
+            case SYS__exit:
+                sys__exit((int)tf->tf_a0);
+                break;
+
+            case SYS_waitpid:
+                err = sys_waitpid(&retval, (pid_t)tf->tf_a0, (int *)tf->tf_a1, (int)tf->tf_a2);
+                break;
+
+            case SYS_getpid:
+                err = sys_getpid(&retval);
+                break;
+
+            default:
+                kprintf("Unknown syscall %d\n", callno);
+                err = ENOSYS;
+                break;
+        }
+
+
+        if (err) {
+                /*
+                 * Return the error code. This gets converted at
+                 * userlevel to a return value of -1 and the error
+                 * code in errno.
+                 */
+                tf->tf_v0 = err;
+                tf->tf_a3 = 1;      /* signal an error */
+        }
+        else {
+                /* Success. */
+                tf->tf_v0 = retval;
+                tf->tf_a3 = 0;      /* signal no error */
+        }
+
+        /*
+         * Now, advance the program counter, to avoid restarting
+         * the syscall over and over again.
+         */
+
+        tf->tf_epc += 4;
+
+        /* Make sure the syscall code didn't forget to lower spl */
+        KASSERT(curthread->t_curspl == 0);
+        /* ...or leak any spinlocks */
+        KASSERT(curthread->t_iplhigh_count == 0);
 }
 
 /*
