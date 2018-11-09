@@ -6,12 +6,11 @@
 #include "synch.h"
 
 struct proc_table_entry {
-	/* struct cv* pte_waitpid_cv; */
+	struct cv* pte_waitpid_cv;
 	struct array pte_child_pids;
 	pid_t pte_parent_pid;
 	bool pte_has_exited;
 	int pte_exit_status;
-	/* int pte_refcount; */
 };
 
 
@@ -28,9 +27,12 @@ proc_table_entry_create(pid_t pid, const pid_t parent_pid /* may be INVALID_PID 
 
 	struct proc_table_entry* pte = kmalloc(sizeof(struct proc_table_entry));
 
-	/* TODO: Better name for the CV */
-	(void)pid;
-	/* pte->pte_waitpid_cv = cv_create(""); */
+        {
+                char buf[64];
+                snprintf(buf, sizeof(buf), "waitpid_cv_%d", pid);
+                pte->pte_waitpid_cv = cv_create("");
+        }
+
 
 	array_init(&pte->pte_child_pids);
 
@@ -44,7 +46,7 @@ proc_table_entry_create(pid_t pid, const pid_t parent_pid /* may be INVALID_PID 
 static
 void
 proc_table_entry_destroy(struct proc_table_entry* pte) {
-	/* cv_destroy(pte->pte_waitpid_cv); /\* FIXME: kpanic!  *\/ */
+	cv_destroy(pte->pte_waitpid_cv);
 
 	array_setsize(&pte->pte_child_pids, 0);
 	array_cleanup(&pte->pte_child_pids);
@@ -55,8 +57,7 @@ proc_table_entry_destroy(struct proc_table_entry* pte) {
 void
 proc_table_init() {
 
-        /* TODO: come up with a better way of specifying that the kernel has pid 1 */
-	p_table[1] = proc_table_entry_create(1, INVALID_PID);
+	p_table[PID_KERN] = proc_table_entry_create(PID_KERN, INVALID_PID);
 
         for (pid_t i = 0; i < __PID_MAX; ++i) {
                 char buf[64];
@@ -68,15 +69,17 @@ proc_table_init() {
 void
 pid_lock_acquire(pid_t pid) {
         KASSERTM(!pid_lock_do_i_hold(pid), "pid %d", pid);
+
+        DEBUG(DB_PROC_TABLE, "acquiring pid lock %d\n", pid);
         lock_acquire(pid_locks[pid]);
-        DEBUG(DB_PROC_TABLE, "acquired pid_lock[%d]\n", pid);
+        DEBUG(DB_PROC_TABLE, "acquired pid lock %d\n", pid);
 }
 
 void
 pid_lock_release(pid_t pid) {
         KASSERTM(pid_lock_do_i_hold(pid), "pid %d", pid);
         lock_release(pid_locks[pid]);
-        DEBUG(DB_PROC_TABLE, "released pid_lock[%d]\n", pid);
+        DEBUG(DB_PROC_TABLE, "released pid lock %d\n", pid);
 }
 
 bool
@@ -98,8 +101,6 @@ void remove_proc_table_entry(pid_t pid) {
 
 bool
 proc_has_child(pid_t parent, pid_t child) {
-
-        KASSERTM(pid_lock_do_i_hold(parent), "pid %d", parent);
 
         const struct array* child_pids = &p_table[parent]->pte_child_pids;
 
@@ -126,9 +127,20 @@ pid_t proc_get_parent(pid_t pid) {
         return p_table[pid]->pte_parent_pid;
 }
 
-void proc_exit(pid_t proc, int status) {
-        p_table[proc]->pte_has_exited = true;
-        p_table[proc]->pte_exit_status = status;
+/* Returns the exit status of the process */
+int proc_wait_on_pid(pid_t pid) {
+
+        if (!proc_has_exited(pid)) {
+                cv_wait(p_table[pid]->pte_waitpid_cv, pid_locks[pid]);
+        }
+        return p_table[pid]->pte_exit_status;
+}
+
+void proc_exit(pid_t pid, int status) {
+        struct proc_table_entry* entry = p_table[pid];
+        entry->pte_has_exited = true;
+        entry->pte_exit_status = status;
+        cv_broadcast(entry->pte_waitpid_cv, pid_locks[pid]);
 }
 bool proc_has_exited(pid_t pid) {
         return p_table[pid]->pte_has_exited;
@@ -137,10 +149,13 @@ bool proc_has_exited(pid_t pid) {
 /* Returns INVALID_PID if a pid cannot be reserved */
 pid_t
 reserve_pid(pid_t parent_pid /* may be INVALID_PID */) {
-	for (pid_t pid = 1; pid < __PID_MAX; ++pid) {
+	for (pid_t pid = PID_MIN; pid < __PID_MAX; ++pid) {
 
                 if (pid == parent_pid) {
-                        /* Avoid deadlocking on our own lock */
+                        /* When called from sys_fork, we lock the parent before
+                         * entering this function, so we must skip the parent to
+                         * avoid potentially deadlocking on the parent's lock
+                         */
                         continue;
                 }
 

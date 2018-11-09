@@ -137,6 +137,13 @@ common_prog(int nargs, char **args)
 		return result;
 	}
 
+
+        result = sys_waitpid(NULL, proc->p_pid, NULL, 0);
+        if (result) {
+                kprintf("sys_waitpid failed: %s\n", strerror(result));
+                return result;
+        }
+
 	/*
 	 * The new process will be destroyed when the program exits...
 	 * once you write the code for handling that.
