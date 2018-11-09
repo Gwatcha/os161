@@ -448,7 +448,7 @@ copyinstr_array(const userptr_t usersrc, char *** dest, size_t* got, int maxcopy
                         /* resize */
                         char * koldstrings = kstrings;
                         kstrings = kmalloc(kstrings_size*2);
-                        memcpy(koldstrings, kstrings, kstrings_size);
+                        memcpy(kstrings, koldstrings, kstrings_size);
                         kstrings_size *= 2;
 
                         /* free old */
@@ -463,7 +463,7 @@ copyinstr_array(const userptr_t usersrc, char *** dest, size_t* got, int maxcopy
                         }
                 }
 
-                if (err == EFAULT) {
+                if (err) {
                         break;
                 }
 
@@ -508,7 +508,7 @@ copyinstr_array(const userptr_t usersrc, char *** dest, size_t* got, int maxcopy
         s = 0; /* used as index into kstrings */
         for (int j = 1; j < i+1; j++) {
                 int string_len = (int) kaddr[j];
-                kaddr[j] = kstrings + s;
+                kaddr[j] = kstrings + s; 
                 s += string_len;
         }
 
