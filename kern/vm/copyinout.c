@@ -433,8 +433,13 @@ copyinstr_array(const userptr_t usersrc, char *** dest, size_t* got, int maxcopy
                 /* len for copyinstr is just the space left in kstrings.*/
                 size_t  len = kstrings_size - string_bytes_copied;
                 size_t got;
-                KASSERT((((int) kstrings+s) % 4) == 0);
-                err = copyinstr( (const_userptr_t) kaddr[i+1], (kstrings + s), len, &got);
+                if ( len != 0 ) {
+                        KASSERT((((int) kstrings+s) % 4) == 0);
+                        err = copyinstr( (const_userptr_t) kaddr[i+1], (kstrings + s), len, &got);
+                }
+                else { /* force a resize, since copyinstr won't work with length == 0 */
+                        err = ENAMETOOLONG;
+                }
 
                 /* resize kstrings case (loop because we may do >1 resizes for
                  * this string) */
@@ -457,7 +462,7 @@ copyinstr_array(const userptr_t usersrc, char *** dest, size_t* got, int maxcopy
                         /* retry copyinstr */
                         len = kstrings_size - string_bytes_copied;
                         KASSERT((((int) kstrings+s) % 4) == 0);
-                        err = copyinstr( (const_userptr_t) src[i], (kstrings + s), len, &got);
+                        err = copyinstr( (const_userptr_t) kaddr[i+1], (kstrings + s), len, &got);
                         if (err == EFAULT) {
                                 break;
                         }
