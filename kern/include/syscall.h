@@ -97,6 +97,6 @@ int sys_getpid(pid_t* retval);
 
 int sys_waitpid(pid_t* retval, pid_t pid, int *status, int options);
 
-void sys__exit(int exitcode);
+__DEAD void sys__exit(int exitcode);
 
 #endif /* _SYSCALL_H_ */
