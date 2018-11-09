@@ -343,12 +343,12 @@ copyoutstr(const char *src,  userptr_t userdest, size_t len, size_t *actual)
  *           but not the first 4 bytes of dest, which contains the number of
  *           arguments.
  *       Returns: 0 on success, error code on failure. possible error codes: E2BIG, EFAULT
- *       Postconditions: if return was successful, caller must call kfree(*dest)
- *                       and kfree(dest) when finished with dest. If
+ *       Postconditions: if return was successful, caller must call kfree(dest)
+ *                       and kfree(dest[1]) when finished with dest. If
  *                       unsucessful, dest is unchanged.
  */
 int
-copyinstr_array(const userptr_t usersrc, char *** dest, size_t* got, int maxcopy) {
+copyinstr_array(const userptr_t usersrc, char* *dest[], size_t* got, int maxcopy) {
 
         char** src = (char**) usersrc;
         (void)dest; /* may be unused */
@@ -362,15 +362,15 @@ copyinstr_array(const userptr_t usersrc, char *** dest, size_t* got, int maxcopy
         int string_bytes_copied = 0;
 
         /*
-         * kernel buffer memory is dynamically allocated throughout the copyin of
-         * src, it starts at 128 bytes (2^7) and is doubled if required,
+         * Our strategy in copying is to dynamically allocated kernel buffer
+         * memory throughout the copyin of src. This is done for two kernel
+         * buffers, one which holds the num of strings and the addresses of
+         * strings, kaddr, and one which holds all the strings (kstrings) 
          *
-         * this is done for two kernel buffers, one which holds the addresses
-         * of strings kaddr, and one which holds all the strings (kstrings)
-         *
-         * kaddr and kstrings are connected so that kaddr[i] points to
-         * an address inside kstrings which indicates the beginning of a string.
-         * so kaddr[1] = &kstrings and so on for all kaddr[i]
+         * these buffers start at 128 bytes (2^7) and are doubled if required.
+         * when finished, kaddr and kstrings are connected so that kaddr[i]
+         * points to an address inside kstrings which indicates the beginning
+         * of a string. So kaddr[1] = &kstrings and so on for all kaddr[i]
          */
 
         int initial_buf_size = 128;
@@ -498,7 +498,6 @@ copyinstr_array(const userptr_t usersrc, char *** dest, size_t* got, int maxcopy
                 i += 1;
         }
 
-
         /* clean up code in case of error */
         if (err) {
                 kfree(kaddr);
@@ -510,7 +509,7 @@ copyinstr_array(const userptr_t usersrc, char *** dest, size_t* got, int maxcopy
            note that i is equal to the end of dest + 1 (where 0 was) and that
            dest currently contains lengths of strings, not the addresses of
            them*/
-        s = 0; /* used as index into kstrings */
+        s = 0; 
         for (int j = 1; j < i+1; j++) {
                 int string_len = (int) kaddr[j];
                 kaddr[j] = kstrings + s; 
