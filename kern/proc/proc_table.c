@@ -152,7 +152,10 @@ reserve_pid(pid_t parent_pid /* may be INVALID_PID */) {
 	for (pid_t pid = PID_MIN; pid < __PID_MAX; ++pid) {
 
                 if (pid == parent_pid) {
-                        /* Avoid deadlocking on our own lock */
+                        /* When called from sys_fork, we lock the parent before
+                         * entering this function, so we must skip the parent to
+                         * avoid potentially deadlocking on the parent's lock
+                         */
                         continue;
                 }
 
