@@ -323,36 +323,38 @@ copyoutstr(const char *src,  userptr_t userdest, size_t len, size_t *actual)
 
 /*
  *   copyinstr_array:
- *       given a userptr_t usersrc (assumed to be char**) and a pointer to a char**
- *       dest this function safely copies it into usersrc into dest, if it is not
+ *       given a userptr_t usersrc (assumed to be char**) and a pointer to a char* array
+ *       dest this function safely copies usersrc into dest, if it is not
  *       possible, it returns an error code.
  *       Inputs:
- *           const userptr_t usersrc, a char** type userptr which is null terminated
+ *           const usersrc, a char** array in user memory. To be proper, it has to be
+ *           terminated by 0 with all strings null terminated, if not, EFAULT
+ *           is returned. If the total size of userptr, (strings and addresses)
+ *           exceeds maxcopy, E2BIG is returned.
  *
- *           memory, the array is also in user memory. To be proper, it has to be
- *           terminated by 0. All strings are null terminated, if not EFAULT is
- *           returned. If the total size of userptr exceeds maxcopy, E2BIG is
- *           returned.
+ *           char*** dest, *dest will be written a kmalloced null terminated
+ *           array of string addresses (null terminator is 4bytes). Also, the
+ *           number of arguments is written in the first 4 bytes.
  *
- *           char*** dest, pass by reference parameter which is of tpye
- *           char**, (an array of strings). will be written the address of the
- *           memory associated with dest. *dest becomes a kmalloced null terminated
- *           array of string addresses if no error
+ *           size_t *got, written the size of dest when finished. incuding everything.
  *
- *           int * len, will be written with the number of arguments,
- *
- *           int maxcopy, the max number of bytes to copy before returning E2BIG.
+ *           int maxcopy, the max number of bytes to copy before returning
+ *           E2BIG. Includes addresses, null terminators, strings, and padding,
+ *           but not the first 4 bytes of dest, which contains the number of
+ *           arguments.
  *       Returns: 0 on success, error code on failure. possible error codes: E2BIG, EFAULT
  *       Postconditions: if return was successful, caller must call kfree(*dest)
  *                       and kfree(dest) when finished with dest. If
- *                       unsucessful, caller is to discard dest.
+ *                       unsucessful, dest is unchanged.
  */
 int
-copyinstr_array(const userptr_t usersrc, char *** dest, int* len, size_t* got, int maxcopy) {
+copyinstr_array(const userptr_t usersrc, char *** dest, size_t* got, int maxcopy) {
 
 	char** src = (char**) usersrc;
+	(void)dest; /* may be unused */
 
 	int err = 0;
+
 	/* running total number of bytes copied associated with dest string
 	 * pointers */
 	int addr_bytes_copied = 0;
@@ -364,31 +366,37 @@ copyinstr_array(const userptr_t usersrc, char *** dest, int* len, size_t* got, i
 	 * src, it starts at 128 bytes (2^7) and is doubled if required,
 	 *
 	 * this is done for two kernel buffers, one which holds the addresses
-	 * of strings (*dest), and one which holds all the strings (kstrings)
+	 * of strings kaddr, and one which holds all the strings (kstrings)
 	 *
-	 * *dest and kstrings are connected so that *dest[i] points to
+	 * kaddr and kstrings are connected so that kaddr[i] points to
 	 * an address inside kstrings which indicates the beginning of a string.
-	 * so *dest = &kstrings
+	 * so kaddr[1] = &kstrings and so on for all kaddr[i]
 	 */
 
 	int initial_buf_size = 128;
-	*dest = kmalloc(initial_buf_size);
+
+	char** kaddr = kmalloc(initial_buf_size);
+	int kaddr_size = initial_buf_size;
+
 	char * kstrings = kmalloc(initial_buf_size);
-	int dest_size = initial_buf_size;
 	int kstrings_size = initial_buf_size;
 
-	int i = 0; /* used as index for src[] and *dest[] */
+	int i = 0; /* used as index into src, the corresponding index in
+		      kaddr is (i+1) (due to length in kaddr[0])  */
 	int s = 0; /* keeps track of the next available spot in kstrings */
 
+
 	/* when this loop exits, we have either encountered an error or have
-	 * finished copying user memory. on each iteration, we copyin the next
-	 * string's address, and copyin the string for that address. In doing
-	 * so, we make sure to break on error or termination, as well as resize
-	 * *dest and kstring if needed */
+	 * finished copying user memory, kaddr[i] also contains sizes for
+	 * string i in kstrings. on each iteration, we copyin the
+	 * next string's address, and copyin the string for that address. In
+	 * doing so, we make sure to break on error or termination, as well as
+	 * resize kaddr and kstring if needed. kstring strings are padded to 4
+	 * bytes. */
 	while( true ) {
 
 		/*
-		 * copy in string address at src + i to *dest[i]
+		 * copy in string address at src + i to kaddr[i+1]
 		 */
 
 		char* temp;
@@ -398,31 +406,38 @@ copyinstr_array(const userptr_t usersrc, char *** dest, int* len, size_t* got, i
 			break;
 		}
 
-		(*dest)[i] = temp;
+		kaddr[i+1] = temp;
 		addr_bytes_copied += sizeof(char*);
 
-		/* termination case, note that we copy null terminator as well */
+		/* termination case, note we copy null terminator as well */
 		if ( temp == 0) {
 			break;
 		}
 
-		/* resize dest case */
-		if (addr_bytes_copied == dest_size) {
-			char ** koldbuff = *dest;
-			*dest = kmalloc(dest_size*2);
-			memcpy(*dest, koldbuff, dest_size);
-			dest_size *= 2;
+		/* resize kaddr case */
+		if (addr_bytes_copied+4 == kaddr_size) {
+			char ** koldbuff = kaddr;
+			kaddr = kmalloc(kaddr_size*2);
+			memcpy(kaddr, koldbuff, kaddr_size);
+			kaddr_size *= 2;
+			kfree(koldbuff);
 		}
 
 		/*
-		 * copy in the string at address (*dest)[i] into kstrings[s]
+		 * copy in the string at address kaddr[i+1] into kstrings[s]
 		 */
 
-		/* len for copyinstr is just the space left in kstrings*/
+		/* s is assumed to point to an address which is 4byte aligned */
+		KASSERT( s % 4 == 0);
+
+		/* len for copyinstr is just the space left in kstrings.*/
 		size_t  len = kstrings_size - string_bytes_copied;
 		size_t got;
-		err = copyinstr( (const_userptr_t) (*dest)[i], (kstrings + s), len, &got);
-		/* resize kstrings case (loop because we may do succesive resizes for this string) */
+		KASSERT((((int) kstrings+s) % 4) == 0);
+		err = copyinstr( (const_userptr_t) kaddr[i+1], (kstrings + s), len, &got);
+
+		/* resize kstrings case (loop because we may do >1 resizes for
+		 * this string) */
 		while (err == ENAMETOOLONG) {
 			err = 0;
 			/* check if too big */
@@ -441,6 +456,7 @@ copyinstr_array(const userptr_t usersrc, char *** dest, int* len, size_t* got, i
 
 			/* retry copyinstr */
 			len = kstrings_size - string_bytes_copied;
+			KASSERT((((int) kstrings+s) % 4) == 0);
 			err = copyinstr( (const_userptr_t) src[i], (kstrings + s), len, &got);
 			if (err == EFAULT) {
 				break;
@@ -451,13 +467,23 @@ copyinstr_array(const userptr_t usersrc, char *** dest, int* len, size_t* got, i
 			break;
 		}
 
+
 		/* we have successively copied the next string in */
 		string_bytes_copied += got;
 		s += got;
 
-		/* store this strings length in (*dest)[i], this is to make it easier to
-		   set up all the pointers from *dest to kstrings afterwards. */
-		(*dest)[i] = (char*) got; /* TODO: Maybe don't reuse same buffer? */
+		/* store this strings length in kaddr[i+1], this is to make it easier to
+		   set up all the pointers from kaddr[i+1] to kstrings afterwards. */
+		kaddr[i+1] = (char*) got;
+
+		/* pad kstrings to 4 bytes */
+		int padding = 4 - (s%4);
+		if ( padding != 4) {
+			string_bytes_copied += padding;
+			s += padding;
+			kaddr[i+1] += padding;
+		}
+
 
 		if (maxcopy < addr_bytes_copied + string_bytes_copied) {
 			err = E2BIG;
@@ -470,24 +496,27 @@ copyinstr_array(const userptr_t usersrc, char *** dest, int* len, size_t* got, i
 
 	/* clean up code in case of error */
 	if (err) {
-		kfree(*dest);
+		kfree(kaddr);
 		kfree(kstrings);
 		return err;
 	}
 
-	/* lastly, set up *dest to point to the strings in kstrings
+	/* lastly, set up kaddr to point to the strings in kstrings
 	   note that i is equal to the end of dest + 1 (where 0 was) and that
 	   dest currently contains lengths of strings, not the addresses of
 	   them*/
 	s = 0; /* used as index into kstrings */
-	for (int j = 0; j < i; j++) {
-		int string_len = (int) (*dest)[j];
-		(*dest)[j] = kstrings + s;
+	for (int j = 1; j < i+1; j++) {
+		int string_len = (int) kaddr[j];
+		kaddr[j] = kstrings + s;
 		s += string_len;
 	}
 
-	*len = i;  /* excludes null terminator */
-	*got = addr_bytes_copied + string_bytes_copied;
+	kaddr[0] = (char*) i; /* the number of args */
+	*got = 4 + addr_bytes_copied + string_bytes_copied;
+
+	*dest = kaddr;
+
 	return 0;
 }
 
@@ -500,28 +529,28 @@ copyinstr_array(const userptr_t usersrc, char *** dest, int* len, size_t* got, i
  *         Inputs:
  *             userptr_t userptr, the user address to write to
  *
- *             char** src, the array of strings addresses in to copy from, strings
- *             must start at src* and be contiguous in memory
- *
- *             int len, the length of src[], excludin null terminator
+ *             char** src, the array of strings addresses in to copy from,
+ *             strings must start at src* and be contiguous in memory, the
+ *             number of strings, n, must be stored in src[0]. and src[n] = 0
  *
  *             size_t size, the size of src in bytes (including strings & null-terminator)
  *
  *         Returns: 0 on success, error code on failure. possible error codes: E2BIG, EFAULT
  */
 int
-copyoutstr_array(const char ** src, userptr_t dest, int len, size_t size) {
+copyoutstr_array(const char ** src, userptr_t dest, size_t size) {
 
 	int err = 0;
+	int argc = (int) src[0];
 
-	const char* src_stringbase = *src;                  /* null terminator */
-	userptr_t dest_stringbase = dest + len*sizeof(char*) + sizeof(char*) ;
+	const char* src_stringbase = src[1];		        /* +null */
+	userptr_t dest_stringbase = dest + argc*sizeof(char*) + sizeof(char*);
 
 	/* copy out the addresses one by one since we need to first make sure to */
 	/* point to strings on the user stack, not in the kernel */
-	for (int i=0; i < len; i++) {
-		userptr_t dest_stringaddr =  dest_stringbase + (src[i] - src_stringbase);
-		err = copyout( &dest_stringaddr, dest + i*sizeof(char*),  sizeof(char*));
+	for (int i=0; i < argc; i++) {
+		userptr_t dest_stringaddr = dest_stringbase + (src[i+1] - src_stringbase);
+		err = copyout( &dest_stringaddr, dest + (sizeof(char*)*(i)), sizeof(char*));
 		if (err) {
 			return  err;
 		}
@@ -535,10 +564,10 @@ copyoutstr_array(const char ** src, userptr_t dest, int len, size_t size) {
 	}
 
 	/* safe to copy the strings now */
-	err = copyout( *src,  dest_stringbase, size - (len*sizeof(char*) + sizeof(char*)));
+	err = copyout( src_stringbase,  dest_stringbase, size - (argc*sizeof(char*) + sizeof(char*) + sizeof(int)));
 	if (err) {
 		return  err;
 	}
 
 	return 0;
-}
+} 

@@ -71,10 +71,9 @@ int sys_execv(const char *program, char **argv) {
 	 * name into kprogram
 	 */
 
-	int argc;
 	size_t kargv_size;
 	char ** kargv;
-	err = copyinstr_array((userptr_t) argv, &kargv, &argc, &kargv_size, ARG_MAX);
+	err = copyinstr_array((userptr_t) argv, &kargv, &kargv_size, ARG_MAX);
 	if (err) {
 		/* no need deallocate kargv on copyinstr_array err  */
 		as_activate();
@@ -127,7 +126,6 @@ int sys_execv(const char *program, char **argv) {
 	/* done with file */
 	vfs_close(v);
 
-
 	/*
 	 * Define new stack region
 	 */
@@ -150,14 +148,12 @@ int sys_execv(const char *program, char **argv) {
 	 * pointer area, so we just subtract the number of bytes read from userspace.
 	 */
 
+	KASSERT(kargv_size % 4 == 0);
 	stackptr -= kargv_size;
+	stackptr += 4;  /* we don't need to argc count in kargv[0] */
 
 	/* kargv into stackptr*/
-	err = copyoutstr_array( (const char**) kargv, (userptr_t) stackptr, argc, kargv_size);
-        /* kargc dosen't contain the length currently, so copy argc out as well*/
-        stackptr -= sizeof(int);
-        err = copyout(&argc, (userptr_t) stackptr, sizeof(int));
-
+	err = copyoutstr_array( (const char**) kargv, (userptr_t) stackptr, kargv_size);
 	if (err) {
 		goto err;
 	}
@@ -172,9 +168,10 @@ int sys_execv(const char *program, char **argv) {
 	 * 8. Warp to user mode
 	 */
 
+	int argc = ((int) kargv[0]);
 
 	/* clean up before doing so */
-	kfree(*kargv);
+	kfree(kargv[1]);
 	kfree(kargv);
 	kfree(kprogram);
 
