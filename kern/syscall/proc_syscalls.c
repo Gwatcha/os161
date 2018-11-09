@@ -35,176 +35,176 @@
 static
 void
 enter_forked_process_wrapper(void* data1, unsigned long data2) {
-	(void)data2;
-	enter_forked_process((struct trapframe*)data1);
+        (void)data2;
+        enter_forked_process((struct trapframe*)data1);
 }
 
 /* ------------------------------------------------------------------------- */
 /* System calls */
 int sys_execv(const char *program, char **argv) {
 
-	/*
-	 * May return these errors:
-	 * ENODEV       The device prefix of program did not exist.
-	 * ENOTDIR      A non-final component of program was not a directory.
-	 * ENOENT       program did not exist.
-	 * EISDIR       program is a directory.
-	 * ENOEXEC      program is not in a recognizable executable file format, was for the wrong platform, or contained invalid fields.
-	 * ENOMEM       Insufficient virtual memory is available.
-	 * E2BIG        The total size of the argument strings exceeeds ARG_MAX.
-	 * EIO          A hard I/O error occurred.
-	 * EFAULT       One of the arguments is an invalid pointer.
-	 */
+        /*
+         * May return these errors:
+         * ENODEV       The device prefix of program did not exist.
+         * ENOTDIR      A non-final component of program was not a directory.
+         * ENOENT       program did not exist.
+         * EISDIR       program is a directory.
+         * ENOEXEC      program is not in a recognizable executable file format, was for the wrong platform, or contained invalid fields.
+         * ENOMEM       Insufficient virtual memory is available.
+         * E2BIG        The total size of the argument strings exceeeds ARG_MAX.
+         * EIO          A hard I/O error occurred.
+         * EFAULT       One of the arguments is an invalid pointer.
+         */
 
-	int err = 0;
+        int err = 0;
 
 
-	struct addrspace * old_as = proc_getas();
-	struct addrspace * new_as = NULL; /* null for now */
-	/* DUMBVIM, this does nothing */
-	as_deactivate();
+        struct addrspace * old_as = proc_getas();
+        struct addrspace * new_as = NULL; /* null for now */
+        /* DUMBVIM, this does nothing */
+        as_deactivate();
 
-	/* ---------------------------------------------------------------- */
+        /* ---------------------------------------------------------------- */
 
-	/*
-	 * 1. Copy arguments (argv) into a kernel buffer, kargv, and program
-	 * name into kprogram
-	 */
+        /*
+         * 1. Copy arguments (argv) into a kernel buffer, kargv, and program
+         * name into kprogram
+         */
 
-	size_t kargv_size;
-	char ** kargv;
-	err = copyinstr_array((userptr_t) argv, &kargv, &kargv_size, ARG_MAX);
-	if (err) {
-		/* no need deallocate kargv on copyinstr_array err  */
-		as_activate();
-		return err;
-	}
+        size_t kargv_size;
+        char ** kargv;
+        err = copyinstr_array((userptr_t) argv, &kargv, &kargv_size, ARG_MAX);
+        if (err) {
+                /* no need deallocate kargv on copyinstr_array err  */
+                as_activate();
+                return err;
+        }
 
-	size_t got;
-	char * kprogram = kmalloc(NAME_MAX);
-	err = copyinstr((const_userptr_t)program, kprogram, NAME_MAX, &got);
-	if (err) {
-		goto err;
-	}
+        size_t got;
+        char * kprogram = kmalloc(NAME_MAX);
+        err = copyinstr((const_userptr_t)program, kprogram, NAME_MAX, &got);
+        if (err) {
+                goto err;
+        }
 
-	/*
-	 * 2. Create new address space
-	 */
+        /*
+         * 2. Create new address space
+         */
 
-	new_as = as_create();
-	if (new_as == NULL) {
-		err = ENOMEM;
-		goto err;
-	}
+        new_as = as_create();
+        if (new_as == NULL) {
+                err = ENOMEM;
+                goto err;
+        }
 
-	/*
-	 * Switch to new address space
-	 */
+        /*
+         * Switch to new address space
+         */
 
-	/* as_activate invalidates tlb indexes */
-	as_activate();
-	proc_setas(new_as);
+        /* as_activate invalidates tlb indexes */
+        as_activate();
+        proc_setas(new_as);
 
-	/*
-	 * Load new executable
-	 */
+        /*
+         * Load new executable
+         */
 
-	/* Open the file. */
-	struct vnode * v;
-	err = vfs_open(kprogram, O_RDONLY, 0, &v);
-	if (err) {
-		goto err;
-	}
+        /* Open the file. */
+        struct vnode * v;
+        err = vfs_open(kprogram, O_RDONLY, 0, &v);
+        if (err) {
+                goto err;
+        }
 
-	vaddr_t entrypoint;
-	err = load_elf(v, &entrypoint);
-	if (err) {
-		vfs_close(v);
-		goto err;
-	}
+        vaddr_t entrypoint;
+        err = load_elf(v, &entrypoint);
+        if (err) {
+                vfs_close(v);
+                goto err;
+        }
 
-	/* done with file */
-	vfs_close(v);
+        /* done with file */
+        vfs_close(v);
 
-	/*
-	 * Define new stack region
-	 */
+        /*
+         * Define new stack region
+         */
 
-	/* Define the user stack in the new address space */
-	vaddr_t stackptr;
-	err = as_define_stack(new_as, &stackptr);
-	if (err) {
-		goto err;
-	}
+        /* Define the user stack in the new address space */
+        vaddr_t stackptr;
+        err = as_define_stack(new_as, &stackptr);
+        if (err) {
+                goto err;
+        }
 
-	/*
-	 * Copy arguments to new address space, properly arranging them.
-	 * Arguments are pointers in registers into user space.
-	 *         - a0: argc
-	 *         - a1: char** pointer that points to a string array of length argc
-	 * we chose to store argc and the program name on the stack, so first
-	 * we need to make space on it. Since the stackpointer is subtract then
-	 * store, it is currently at the highest address + 1 in the stack
-	 * pointer area, so we just subtract the number of bytes read from userspace.
-	 */
+        /*
+         * Copy arguments to new address space, properly arranging them.
+         * Arguments are pointers in registers into user space.
+         *         - a0: argc
+         *         - a1: char** pointer that points to a string array of length argc
+         * we chose to store argc and the program name on the stack, so first
+         * we need to make space on it. Since the stackpointer is subtract then
+         * store, it is currently at the highest address + 1 in the stack
+         * pointer area, so we just subtract the number of bytes read from userspace.
+         */
 
-	KASSERT(kargv_size % 4 == 0);
-	stackptr -= kargv_size;
-	stackptr += 4;  /* we don't need to argc count in kargv[0] */
+        KASSERT(kargv_size % 4 == 0);
+        stackptr -= kargv_size;
+        stackptr += 4;  /* we don't need to argc count in kargv[0] */
 
-	/* kargv into stackptr*/
-	err = copyoutstr_array( (const char**) kargv, (userptr_t) stackptr, kargv_size);
-	if (err) {
-		goto err;
-	}
+        /* kargv into stackptr*/
+        err = copyoutstr_array( (const char**) kargv, (userptr_t) stackptr, kargv_size);
+        if (err) {
+                goto err;
+        }
 
-	/*
-	 * Clean up old address space
-	 */
+        /*
+         * Clean up old address space
+         */
 
-	as_destroy(old_as); /* the point of no return...  */
+        as_destroy(old_as); /* the point of no return...  */
 
-	/*
-	 * 8. Warp to user mode
-	 */
+        /*
+         * 8. Warp to user mode
+         */
 
-	int argc = ((int) kargv[0]);
+        int argc = ((int) kargv[0]);
 
-	/* clean up before doing so */
-	kfree(kargv[1]);
-	kfree(kargv);
-	kfree(kprogram);
+        /* clean up before doing so */
+        kfree(kargv[1]);
+        kfree(kargv);
+        kfree(kprogram);
 
-	enter_new_process(argc, (userptr_t) stackptr /*userspace addr of argv*/,
-			NULL /*userspace addr of environment*/,
-			stackptr, entrypoint);
+        enter_new_process(argc, (userptr_t) stackptr /*userspace addr of argv*/,
+                        NULL /*userspace addr of environment*/,
+                        stackptr, entrypoint);
 
-	/* enter_new_process does not return. */
-	panic("enter_new_process returned\n");
-	return EINVAL;
+        /* enter_new_process does not return. */
+        panic("enter_new_process returned\n");
+        return EINVAL;
 
 err:
-	kfree(*kargv);
-	kfree(kargv);
-	kfree(kprogram);
+        kfree(*kargv);
+        kfree(kargv);
+        kfree(kprogram);
 
-	/* clean up address space */
-	proc_setas(old_as);
-	as_destroy(new_as); /* DUMBVM handles the case where new_as is NULL */
-	as_activate();
-	return err;
+        /* clean up address space */
+        proc_setas(old_as);
+        as_destroy(new_as); /* DUMBVM handles the case where new_as is NULL */
+        as_activate();
+        return err;
 }
 
 int
 sys_fork(pid_t* retval, struct trapframe* trapframe) {
 
-	/* Errors:
-	 * EMPROC  The current user already has too many processes.
-	 * ENPROC  There are already too many processes on the system.
-	 * ENOMEM  Sufficient virtual memory for the new process was not available.
-	 */
+        /* Errors:
+         * EMPROC  The current user already has too many processes.
+         * ENPROC  There are already too many processes on the system.
+         * ENOMEM  Sufficient virtual memory for the new process was not available.
+         */
 
-	const pid_t curpid = curproc->p_pid;
+        const pid_t curpid = curproc->p_pid;
 
         /* SYNCHRONIZATION SCHEME
          *
@@ -218,66 +218,66 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
 
         pid_lock_acquire(curpid);
 
-	KASSERTM(proc_table_entry_exists(curpid), "pid %d", curpid);
+        KASSERTM(proc_table_entry_exists(curpid), "pid %d", curpid);
 
-	/* Find an unused pid for the child */
-	const pid_t child_pid = reserve_pid(curpid);
-	if (child_pid == INVALID_PID) {
-		pid_lock_release(curpid);
-		return ENPROC;
-	}
+        /* Find an unused pid for the child */
+        const pid_t child_pid = reserve_pid(curpid);
+        if (child_pid == INVALID_PID) {
+                pid_lock_release(curpid);
+                return ENPROC;
+        }
 
-	DEBUG(DB_PROC_TABLE, "fork %d -> %d\n", curpid, child_pid);
+        DEBUG(DB_PROC_TABLE, "fork %d -> %d\n", curpid, child_pid);
 
-	/* Create child process with proc_create */
-	struct proc* child_proc = proc_create(curproc->p_name, child_pid);
+        /* Create child process with proc_create */
+        struct proc* child_proc = proc_create(curproc->p_name, child_pid);
 
-	/* Add the child's pid to the parent's list of children */
-	int error = proc_add_child(curpid, child_pid);
-	if (error) {
-		pid_lock_release(curpid);
-		return error;
-	}
+        /* Add the child's pid to the parent's list of children */
+        int error = proc_add_child(curpid, child_pid);
+        if (error) {
+                pid_lock_release(curpid);
+                return error;
+        }
 
-	/* Copy the address space */
-	as_copy(curproc->p_addrspace, &child_proc->p_addrspace);
+        /* Copy the address space */
+        as_copy(curproc->p_addrspace, &child_proc->p_addrspace);
 
-	/* Copy the file table */
-	file_table_copy(&curproc->p_file_table, &child_proc->p_file_table);
+        /* Copy the file table */
+        file_table_copy(&curproc->p_file_table, &child_proc->p_file_table);
 
-	/* TODO: Copy threads */
+        /* TODO: Copy threads */
 
-	/* TODO: Create kernel thread */
+        /* TODO: Create kernel thread */
 
-	/* Create a copy of the trapframe for the child */
-	struct trapframe* tf_copy = kmalloc(sizeof(struct trapframe));
-	memcpy(tf_copy, trapframe, sizeof(struct trapframe));
+        /* Create a copy of the trapframe for the child */
+        struct trapframe* tf_copy = kmalloc(sizeof(struct trapframe));
+        memcpy(tf_copy, trapframe, sizeof(struct trapframe));
 
-	/* Fork the child process */
-	thread_fork("child", child_proc, &enter_forked_process_wrapper, tf_copy, 0);
+        /* Fork the child process */
+        thread_fork("child", child_proc, &enter_forked_process_wrapper, tf_copy, 0);
 
-	*retval = child_proc->p_pid;
+        *retval = child_proc->p_pid;
 
-	pid_lock_release(curpid);
+        pid_lock_release(curpid);
 
-	return 0;
+        return 0;
 }
 
 int
 sys_getpid(pid_t* retval) {
-	*retval = curproc->p_pid;
-	return 0;
+        *retval = curproc->p_pid;
+        return 0;
 }
 
 int
 sys_waitpid(pid_t* retval, pid_t pid, int *status, int options) {
 
-	/* Errors:
-	 * EINVAL  The options argument requested invalid or unsupported options.
-	 * ECHILD  The pid argument named a process that was not a child of the current process.
-	 * ESRCH   The pid argument named a nonexistent process.
-	 * EFAULT  The status argument was an invalid pointer.
-	 */
+        /* Errors:
+         * EINVAL  The options argument requested invalid or unsupported options.
+         * ECHILD  The pid argument named a process that was not a child of the current process.
+         * ESRCH   The pid argument named a nonexistent process.
+         * EFAULT  The status argument was an invalid pointer.
+         */
 
         if (retval != NULL) {
                 *retval = pid;
@@ -324,17 +324,17 @@ sys_waitpid(pid_t* retval, pid_t pid, int *status, int options) {
 
         DEBUG(DB_PROC_TABLE, "done wait %d on %d\n", curpid, pid);
 
-	return error;
+        return error;
 }
 
 void
 sys__exit(int exitcode) {
 
-	const pid_t curpid = curproc->p_pid;
+        const pid_t curpid = curproc->p_pid;
 
-	DEBUG(DB_PROC_TABLE, "exit %d\n", curpid);
+        DEBUG(DB_PROC_TABLE, "exit %d\n", curpid);
 
-	KASSERTM(proc_table_entry_exists(curpid), "pid %d", curpid);
+        KASSERTM(proc_table_entry_exists(curpid), "pid %d", curpid);
 
         const pid_t parent_pid = proc_get_parent(curpid);
 
@@ -360,74 +360,74 @@ sys__exit(int exitcode) {
                 pid_lock_acquire(parent_pid);
         }
         pid_lock_acquire(curpid);
-	struct array* child_pids = proc_get_children(curpid);
+        struct array* child_pids = proc_get_children(curpid);
 
-	/* Clean up proc_table_entry of each child that has already exited */
-	unsigned num_children = child_pids->num;
-	for (unsigned i = 0; i < num_children; ++i) {
+        /* Clean up proc_table_entry of each child that has already exited */
+        unsigned num_children = child_pids->num;
+        for (unsigned i = 0; i < num_children; ++i) {
 
-		pid_t child_pid = (pid_t)array_get(child_pids, i);
+                pid_t child_pid = (pid_t)array_get(child_pids, i);
 
-		DEBUG(DB_PROC_TABLE, "%d examining child %d\n", curpid, child_pid);
+                DEBUG(DB_PROC_TABLE, "%d examining child %d\n", curpid, child_pid);
 
-		pid_lock_acquire(child_pid);
+                pid_lock_acquire(child_pid);
 
-		/* child's proc table entry should exist until its parent exits */
-		KASSERTM(proc_table_entry_exists(child_pid), "pid %d", child_pid);
+                /* child's proc table entry should exist until its parent exits */
+                KASSERTM(proc_table_entry_exists(child_pid), "pid %d", child_pid);
 
-		/* this process should be the parent of its children */
-		KASSERTM(proc_get_parent(child_pid) == curpid, "pid %d", child_pid);
+                /* this process should be the parent of its children */
+                KASSERTM(proc_get_parent(child_pid) == curpid, "pid %d", child_pid);
 
-		if (proc_has_exited(child_pid)) {
+                if (proc_has_exited(child_pid)) {
 
-			DEBUG(DB_PROC_TABLE, "remove_proc_table_entry(%d) - child\n", child_pid);
-			remove_proc_table_entry(child_pid);
-		}
+                        DEBUG(DB_PROC_TABLE, "remove_proc_table_entry(%d) - child\n", child_pid);
+                        remove_proc_table_entry(child_pid);
+                }
 
-		pid_lock_release(child_pid);
-	}
+                pid_lock_release(child_pid);
+        }
 
-	proc_exit(curpid, exitcode);
+        proc_exit(curpid, exitcode);
 
-	enum parent_status {
-		ps_invalid,
-		ps_no_entry,
-		ps_has_exited,
-		ps_pid_recycled,
-		ps_alive,
-		ps_count
-	};
+        enum parent_status {
+                ps_invalid,
+                ps_no_entry,
+                ps_has_exited,
+                ps_pid_recycled,
+                ps_alive,
+                ps_count
+        };
 
-	enum parent_status pstatus =
-		parent_pid == INVALID_PID               ? ps_invalid :
-		!proc_table_entry_exists(parent_pid)    ? ps_no_entry :
-		proc_has_exited(parent_pid)             ? ps_has_exited :
-		!proc_has_child(parent_pid, curpid)     ? ps_pid_recycled :
-		ps_alive;
+        enum parent_status pstatus =
+                parent_pid == INVALID_PID               ? ps_invalid :
+                !proc_table_entry_exists(parent_pid)    ? ps_no_entry :
+                proc_has_exited(parent_pid)             ? ps_has_exited :
+                !proc_has_child(parent_pid, curpid)     ? ps_pid_recycled :
+                ps_alive;
 
-	if (pstatus != ps_alive) {
+        if (pstatus != ps_alive) {
 
-		/* Destroy this entry; there is no living parent that may call waitpid */
-		remove_proc_table_entry(curpid);
+                /* Destroy this entry; there is no living parent that may call waitpid */
+                remove_proc_table_entry(curpid);
 
-		const char* db_format[ps_count] = {
-			"remove_proc_table_entry(%d), parent %d is invalid\n",
-			"remove_proc_table_entry(%d), parent %d has no entry\n",
-			"remove_proc_table_entry(%d), parent %d has exited\n",
-			"remove_proc_table_entry(%d), parent %d has been recycled\n",
-			NULL
-		};
+                const char* db_format[ps_count] = {
+                        "remove_proc_table_entry(%d), parent %d is invalid\n",
+                        "remove_proc_table_entry(%d), parent %d has no entry\n",
+                        "remove_proc_table_entry(%d), parent %d has exited\n",
+                        "remove_proc_table_entry(%d), parent %d has been recycled\n",
+                        NULL
+                };
 
-		DEBUG(DB_PROC_TABLE, db_format[pstatus], curpid, parent_pid);
-	}
+                DEBUG(DB_PROC_TABLE, db_format[pstatus], curpid, parent_pid);
+        }
 
-	pid_lock_release(curpid);
-	if (parent_pid != INVALID_PID) {
-		pid_lock_release(parent_pid);
-	}
+        pid_lock_release(curpid);
+        if (parent_pid != INVALID_PID) {
+                pid_lock_release(parent_pid);
+        }
 
-	/* Print in reverse (easy way to tell where the call began and ended) */
-	DEBUG(DB_PROC_TABLE, "%d exit\n", curpid);
+        /* Print in reverse (easy way to tell where the call began and ended) */
+        DEBUG(DB_PROC_TABLE, "%d exit\n", curpid);
 
-	thread_exit_destroy_proc();
+        thread_exit_destroy_proc();
 }
