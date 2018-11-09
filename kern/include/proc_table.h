@@ -61,7 +61,11 @@ struct array* proc_get_children(pid_t proc);
 /* Returns INVALID_PID if the process does not have a parent */
 pid_t proc_get_parent(pid_t proc);
 
+/* Returns the exit status of the process */
+int proc_wait_on_pid(pid_t pid);
+
 void proc_exit(pid_t proc, int status);
+
 bool proc_has_exited(pid_t proc);
 
 

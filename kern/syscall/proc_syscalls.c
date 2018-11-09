@@ -215,6 +215,16 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
 
         const pid_t curpid = curproc->p_pid;
 
+        /* SYNCHRONIZATION SCHEME
+         *
+         * Must acquire the parent's lock to ensure that its proc_table
+         * entry is not concurrently read (by wait or exit) as it is modified
+         * here.
+         *
+         * It is not necessary to lock the child pid, because it is not yet
+         * running concurrently (we have the only reference to it).
+         */
+
         pid_lock_acquire(curpid);
 
         KASSERTM(proc_table_entry_exists(curpid), "pid %d", curpid);
@@ -278,11 +288,60 @@ sys_waitpid(pid_t* retval, pid_t pid, int *status, int options) {
 	 * EFAULT  The status argument was an invalid pointer.
 	 */
 
-	(void) retval;
-	(void) pid;
-	(void) *status;
-	(void) options;
-	*status = 0;
+        if (retval != NULL) {
+                *retval = pid;
+        }
+        if (status != NULL) {
+                *status = 0;
+        }
+
+        /* TODO: use copy_in/copy_out */
+        /* if (status is invalid) { */
+        /*         return EFAULT; */
+        /* } */
+
+        if (options != 0) {
+                return EINVAL;
+        }
+
+        if (!proc_table_entry_exists(pid)) {
+                return ESRCH;
+        }
+
+        pid_t curpid = curproc->p_pid;
+
+
+        if (!proc_has_child(curpid, pid)) {
+                pid_lock_release(pid);
+                return ECHILD;
+        }
+
+        DEBUG(DB_PROC_TABLE, "wait %d on %d\n", curpid, pid);
+
+        /* SYNCHRONIZATION SCHEME
+         *
+         * Must acquire the lock of the pid we are waiting on, to prevent
+         * it from exiting concurrently while we are running wait on it.
+         * The lock is released when we wait on its CV, and acquired again
+         * when it broadcasts on the CV that is has exited.
+         *
+         * Must NOT acquire the lock of curpid, because doing so prevents the
+         * child process from exiting, because the child process acquires its
+         * parent's lock in exit. The child process acquires its parent's lock
+         * in exit to ensure that its parent's proc_table entry is not modified
+         * (by fork or exit) while the child is reading from it.
+         */
+
+        pid_lock_acquire(pid);
+
+        const int exit_status = proc_wait_on_pid(pid);
+        if (status != NULL) {
+                *status = exit_status;
+        }
+
+        pid_lock_release(pid);
+
+        DEBUG(DB_PROC_TABLE, "done wait %d on %d\n", curpid, pid);
 
 	return 0;
 }
@@ -297,6 +356,25 @@ sys__exit(int exitcode) {
 	KASSERTM(proc_table_entry_exists(curpid), "pid %d", curpid);
 
         const pid_t parent_pid = proc_get_parent(curpid);
+
+        /* SYNCHRONIZATION SCHEME
+         *
+         * Must acquire the parent's lock to ensure that its proc_table
+         * entry is not modified (by fork or exit) as the current exiting
+         * process reads from it.
+         *
+         * Must acquire the current process's lock to prevent other processes
+         * from reading from it (in wait or exit) while we are writing to it.
+         *
+         * Must acquire the lock of each of the current process's children
+         * within a narrow scope while removing entries of children that have
+         * already exited, again to prevent concurrent access.
+         *
+         * By acquiring parent locks before child locks, we can use the
+         * parent-child relationships to avoid deadlocks, because
+         * the parent-child relationships from a tree (a graph without cycles)
+         */
+
         if (parent_pid != INVALID_PID) {
                 pid_lock_acquire(parent_pid);
         }

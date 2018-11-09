@@ -255,13 +255,11 @@ proc_destroy(struct proc *proc)
 void
 proc_bootstrap(void)
 {
-        /* TODO: come up with a better way of specifying that the kernel has pid 1 */
         proc_table_init();
-	kproc = proc_create("[kernel]", 1);
+	kproc = proc_create("[kernel]", PID_KERN);
 	if (kproc == NULL) {
 		panic("proc_create for kproc failed\n");
 	}
-        /* kproc->p_pid = 1; */
 }
 
 /*
