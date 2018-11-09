@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
 cd kern/compile/DUMBVM &&
-bmake depend &&
-bmake &&
-bmake install &&
+bmake depend -s &&
+bmake -s &&
+bmake install -s &&
 
 cd ../../../../root &&
 sys161 kernel &&

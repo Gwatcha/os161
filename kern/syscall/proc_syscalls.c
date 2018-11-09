@@ -184,7 +184,7 @@ int sys_execv(const char *program, char **argv) {
         return EINVAL;
 
 err:
-        kfree(*kargv);
+        kfree(kargv[1]);
         kfree(kargv);
         kfree(kprogram);
 
