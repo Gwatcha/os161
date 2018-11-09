@@ -83,7 +83,7 @@ void
 syscall(struct trapframe *tf)
 {
         int callno;
-        int32_t retval; 
+        int32_t retval;
         int err;
 
         KASSERT(curthread != NULL);
@@ -136,7 +136,7 @@ syscall(struct trapframe *tf)
             case SYS_lseek: {
                     /* kwhence is on the user stack, so we must copy it in */
                     int kwhence;
-                    copyin((userptr_t) (tf->tf_sp + 16), &kwhence, 4); 
+                    copyin((userptr_t) (tf->tf_sp + 16), &kwhence, 4);
 
                     /* now we join 2 32bit registers, a2 & a3, which represent the 64bit value offset */
                     off_t kpos = ((off_t) tf->tf_a2 << 32) | ((off_t) tf->tf_a3);
