@@ -310,9 +310,7 @@ sys_waitpid(pid_t* retval, pid_t pid, int *status, int options) {
 
         pid_t curpid = curproc->p_pid;
 
-
         if (!proc_has_child(curpid, pid)) {
-                pid_lock_release(pid);
                 return ECHILD;
         }
 
