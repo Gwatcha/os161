@@ -129,7 +129,6 @@ file_table_copy(file_table* file_table_in, file_table* file_table_out) {
         }
 }
 
-/* file_table_entry* */
 static
 int
 open_console(struct proc* p, int fd, int flags) {
