@@ -240,9 +240,10 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
         file_table_copy(&curproc->p_file_table, &child_proc->p_file_table);
 
         /* Copy the cwd */
-        struct vnode * cwd = curproc->p_cwd;
-        child_proc->p_cwd = cwd;
-        VOP_INCREF(cwd);
+	if (curproc->p_cwd != NULL) {
+		VOP_INCREF(curproc->p_cwd);
+		child_proc->p_cwd = curproc->p_cwd;
+	}
 
         /* TODO: Copy threads */
 
