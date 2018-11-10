@@ -38,13 +38,14 @@
 
 #include <limits.h>
 #include <spinlock.h>
+#include <synch.h>
 #include <thread.h> /* required for struct threadarray */
 
 struct addrspace;
 struct vnode;
 
 struct file_table_entry {
-	struct spinlock fte_lock;  /* Lock for this structure */
+	struct lock* fte_lock;  /* Lock for this structure */
 	struct vnode* vnode;
 	off_t offset;
 	int open_flags;
