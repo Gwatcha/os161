@@ -16,6 +16,7 @@
 #include <syscall.h>
 #include <copyinout.h>
 #include <vfs.h>
+#include <vnode.h>
 
 #include <mips/trapframe.h>
 
@@ -237,6 +238,11 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
 
         /* Copy the file table */
         file_table_copy(&curproc->p_file_table, &child_proc->p_file_table);
+
+        /* Copy the cwd */
+        struct vnode * cwd = curproc->p_cwd;
+        child_proc->p_cwd = cwd;
+        VOP_INCREF(cwd);
 
         /* TODO: Copy threads */
 
