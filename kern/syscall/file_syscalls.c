@@ -251,9 +251,9 @@ sys_lseek(off_t *retval, int fd, off_t pos, int whence)
                 return EBADF;
         }
 
-	/* is seekable check */
-	if (!VOP_ISSEEKABLE(file_table[fd]->vnode)) {
-		return ESPIPE;
+        /* is seekable check */
+        if (!VOP_ISSEEKABLE(file_table[fd]->vnode)) {
+                return ESPIPE;
         }
 
         /* a stat buf is needed in case we need a files size */
@@ -296,7 +296,7 @@ sys_lseek(off_t *retval, int fd, off_t pos, int whence)
         }
 
         *retval = file_table[fd]->offset;
-	return 0;
+        return 0;
 }
 
 int
