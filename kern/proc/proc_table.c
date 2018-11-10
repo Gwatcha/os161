@@ -118,7 +118,7 @@ proc_add_child(pid_t parent, pid_t child) {
         return array_add(&p_table[parent]->pte_child_pids, (void*)child, NULL);
 }
 
-struct array*
+const struct array*
 proc_get_children(pid_t pid) {
         return &p_table[pid]->pte_child_pids;
 }

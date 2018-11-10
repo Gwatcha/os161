@@ -52,7 +52,7 @@ void remove_proc_table_entry(pid_t pid);
 /* Returns true if parent is the parent of child */
 bool proc_has_child(pid_t parent, pid_t child);
 
-struct array* proc_get_children(pid_t proc);
+const struct array* proc_get_children(pid_t proc);
 
 /* Returns INVALID_PID if the process does not have a parent */
 pid_t proc_get_parent(pid_t proc);

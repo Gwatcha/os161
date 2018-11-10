@@ -353,7 +353,7 @@ sys__exit(int exitcode) {
                 pid_lock_acquire(parent_pid);
         }
         pid_lock_acquire(curpid);
-        struct array* child_pids = proc_get_children(curpid);
+        const struct array* child_pids = proc_get_children(curpid);
 
         /* Clean up proc_table_entry of each child that has already exited */
         unsigned num_children = child_pids->num;
