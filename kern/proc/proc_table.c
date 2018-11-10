@@ -112,6 +112,7 @@ proc_has_child(pid_t parent, pid_t child) {
 	return false;
 }
 
+static
 int
 proc_add_child(pid_t parent, pid_t child) {
         return array_add(&p_table[parent]->pte_child_pids, (void*)child, NULL);
@@ -146,9 +147,22 @@ bool proc_has_exited(pid_t pid) {
         return p_table[pid]->pte_has_exited;
 }
 
-/* Returns INVALID_PID if a pid cannot be reserved */
+/*
+ * Reserves a new pid and adds it to parent_pid's children (if parent_pid is valid)
+ *
+ * Returns INVALID_PID if a pid cannot be reserved
+ *
+ * parent_pid may be invalid.
+ */
 pid_t
-reserve_pid(pid_t parent_pid /* may be INVALID_PID */) {
+reserve_pid(pid_t parent_pid) {
+
+        if (parent_pid != INVALID_PID) {
+
+                /* We add the child pid to its children, so it must be locked */
+                KASSERT(pid_lock_do_i_hold(parent_pid));
+        }
+
 	for (pid_t pid = PID_MIN; pid < __PID_MAX; ++pid) {
 
                 if (pid == parent_pid) {
@@ -164,6 +178,12 @@ reserve_pid(pid_t parent_pid /* may be INVALID_PID */) {
                         if (p_table[pid] == NULL) {
 
                                 p_table[pid] = proc_table_entry_create(pid, parent_pid);
+
+                                if (parent_pid != INVALID_PID) {
+
+                                        proc_add_child(parent_pid, pid);
+                                }
+
                                 pid_lock_release(pid);
                                 return pid;
                         }

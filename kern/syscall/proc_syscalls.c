@@ -232,13 +232,6 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
         /* Create child process with proc_create */
         struct proc* child_proc = proc_create(curproc->p_name, child_pid);
 
-        /* Add the child's pid to the parent's list of children */
-        int error = proc_add_child(curpid, child_pid);
-        if (error) {
-                pid_lock_release(curpid);
-                return error;
-        }
-
         /* Copy the address space */
         as_copy(curproc->p_addrspace, &child_proc->p_addrspace);
 

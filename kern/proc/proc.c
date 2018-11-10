@@ -274,7 +274,10 @@ proc_create_runprogram(const char *name)
 {
 	struct proc *newproc;
 
-	newproc = proc_create(name, reserve_pid(INVALID_PID));
+        pid_lock_acquire(curproc->p_pid);
+	newproc = proc_create(name, reserve_pid(curproc->p_pid));
+        pid_lock_release(curproc->p_pid);
+
 	if (newproc == NULL) {
 		return NULL;
 	}
