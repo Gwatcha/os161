@@ -25,7 +25,7 @@
 
 /* On success, open returns a nonnegative file handle. On error, -1 is returned,
    and errno is set according to the error encountered. */
-int 
+int
 sys_open(int* retval, const char *filename, int flags)
 {
 	/*
@@ -98,7 +98,7 @@ sys_open(int* retval, const char *filename, int flags)
  *     Postconditions: the offset for the fd is advanced by the number of bytes
  *                     read and buf contains the data
  */
-int 
+int
 sys_read(ssize_t * retval, int fd, void* buf, size_t buflen)
 {
 	/*
@@ -171,7 +171,7 @@ sys_read(ssize_t * retval, int fd, void* buf, size_t buflen)
  *     Postconditions: the offset for the fd is advanced by the number of bytes
  *                     read and buf contains the data
  */
-int 
+int
 sys_write(ssize_t *retval, int fd, const void *buf, size_t nbytes)
 {
         /*
@@ -229,7 +229,7 @@ sys_write(ssize_t *retval, int fd, const void *buf, size_t nbytes)
 	return 0;
 }
 
-int 
+int
 sys_lseek(off_t *retval, int fd, off_t pos, int whence)
 {
         /*
@@ -299,7 +299,7 @@ sys_lseek(off_t *retval, int fd, off_t pos, int whence)
 	return 0;
 }
 
-int 
+int
 sys_close(int fd)
 {
 	/*
@@ -337,7 +337,7 @@ sys_close(int fd)
 
 /* dup2 clones the file handle oldfd onto the file handle newfd.
    If newfd names an already-open file, that file is closed */
-int 
+int
 sys_dup2(int *retval, int oldfd, int newfd)
 {
        /*
@@ -386,7 +386,7 @@ sys_dup2(int *retval, int oldfd, int newfd)
         return 0;
 }
 
-int 
+int
 sys_chdir(const char* pathname)
 {
 	/*
@@ -429,7 +429,7 @@ sys_chdir(const char* pathname)
  *       is not obliged to (and generally cannot) make the __getcwd call atomic with respect to
  *       other threads in the same process accessing the transfer buffer during the operation.
  */
-int 
+int
 sys___getcwd(int *retval, char* buf, size_t buflen)
 {
 	/*
@@ -469,4 +469,3 @@ sys___getcwd(int *retval, char* buf, size_t buflen)
         *retval = bytes_read;
 	return 0;
 }
-
