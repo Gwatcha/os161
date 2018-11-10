@@ -69,7 +69,7 @@ void file_table_copy(file_table* file_table_in, file_table* file_table_out);
  */
 struct proc {
 	char *p_name;			/* Name of this process */
-    int p_pid;                      /* ID of this process */
+        int p_pid;                      /* ID of this process */
 	struct spinlock p_lock;		/* Lock for this structure */
 	struct threadarray p_threads;	/* Threads in this process */
 
@@ -80,7 +80,7 @@ struct proc {
 	struct vnode *p_cwd;		/* current working directory */
 
 	/* an array of file_table_entries representing this processes open files */
-    file_table p_file_table;
+        file_table p_file_table;
 };
 
 /* This is the process structure for the kernel and for kernel-only threads. */
