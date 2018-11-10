@@ -317,19 +317,8 @@ sys_close(int fd)
                 return EBADF;
         }
 
-        struct file_table_entry* fte = file_table[fd];
+        file_table_entry_decref(file_table[fd]);
         file_table[fd] = NULL;
-
-        /* decrement the reference count */
-        fte->refcount -= 1;
-        if (fte->refcount > 0) {
-                /* if the file table entry is still in use, do not destroy it */
-                return 0;
-        }
-
-	/* else, we may safely remove this file table entry & 'close' the vnode*/
-        vfs_close(fte->vnode);
-	file_table_entry_destroy(fte);
 
         return 0;
 }

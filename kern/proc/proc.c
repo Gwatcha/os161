@@ -67,6 +67,8 @@ struct file_table_entry* file_table_entry_create(int open_flags, struct vnode* v
         /* FIXME memory leak!!!!!!! */
         struct file_table_entry* fte = kmalloc(sizeof(struct file_table_entry));
 
+        spinlock_init(&fte->fte_lock);
+
         fte->vnode = vnode;
         fte->offset = 0;
         fte->open_flags = open_flags;
@@ -82,9 +84,36 @@ struct file_table_entry* file_table_entry_create(int open_flags, struct vnode* v
  */
 void
 file_table_entry_destroy(struct file_table_entry* fte) {
+        spinlock_cleanup(&fte->fte_lock);
 	KASSERT(fte->refcount == 0);
 
 	kfree(fte);
+}
+
+/*
+ * Decrement the ref count of the file table entry.
+ * Destroy the file table entry if its refcount is zero
+ */
+void file_table_entry_decref(struct file_table_entry* fte) {
+
+        spinlock_acquire(&fte->fte_lock);
+
+        /* The reference count should not be decremented below 0 */
+        KASSERT(fte->refcount > 0);
+
+        /* decrement the reference count */
+        fte->refcount -= 1;
+
+        KASSERT(spinlock_do_i_hold(&fte->fte_lock));
+        spinlock_release(&fte->fte_lock);
+
+        if (fte->refcount <= 0) {
+                /* If the file table entry's reference count is <= 0 we may safely destroy it */
+                /* we may safely destroy this file table entry and close the vnode */
+                vfs_close(fte->vnode);
+                file_table_entry_destroy(fte);
+        }
+        return;
 }
 
 void
@@ -194,6 +223,13 @@ proc_destroy(struct proc *proc)
 		VOP_DECREF(proc->p_cwd);
 		proc->p_cwd = NULL;
 	}
+
+        /* Decref all file table entries */
+        for (int fd = 0; fd < __OPEN_MAX; ++fd) {
+                if (proc->p_file_table[fd] != NULL) {
+                        file_table_entry_decref(proc->p_file_table[fd]);
+                }
+        }
 
 	/* VM fields */
 	if (proc->p_addrspace) {

@@ -44,6 +44,7 @@ struct addrspace;
 struct vnode;
 
 struct file_table_entry {
+	struct spinlock fte_lock;  /* Lock for this structure */
 	struct vnode* vnode;
 	off_t offset;
 	int open_flags;
@@ -54,6 +55,12 @@ typedef struct file_table_entry* file_table[__OPEN_MAX];
 struct file_table_entry* file_table_entry_create(int open_flags, struct vnode* vnode);
 
 void file_table_entry_destroy(struct file_table_entry* fte);
+
+/*
+ * Decrement the ref count of the file table entry.
+ * Destroy the file table entry if its refcount is zero
+ */
+void file_table_entry_decref(struct file_table_entry* fte);
 
 void file_table_copy(file_table* file_table_in, file_table* file_table_out);
 
