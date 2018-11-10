@@ -1,0 +1,20 @@
+* [X] forktest 15 points
+* [X] argtest  15 points
+* [X] bigexec  10 points
+* [X] bigfile  2 points
+* [X] farm     2 points
+
+* [ ] badcall  10 points
+  * [ ] Wrong exit code of subprocess
+* [ ] crash    2 points
+  * [ ] Proper exit codes for crashed processes, currently the parent reads signal 2 everytime! :o 
+* [ ] faulter  2 points
+  * [ ] Works but returns signal 2!
+* [ ] multiexec 2 points
+  * [ ] Not passing, need to add synchronization on argv or something
+
+* [ ] Code style improvements
+  * [ ] Add comments somewhere? Refractor? 
+
+* [ ] Check for memory leaks with kdump. There's one at the FIXME in proc_table_entry create, if that hasn't been fixed yet.
+
