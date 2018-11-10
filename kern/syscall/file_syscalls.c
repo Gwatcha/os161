@@ -130,6 +130,8 @@ sys_read(ssize_t * retval, int fd, void* buf, size_t buflen)
     		return EFAULT;
         }
 
+        lock_acquire(file_table[fd]->fte_lock);
+
         /* acquire file info */
         off_t offset = file_table[fd]->offset;
         struct vnode * file = file_table[fd]->vnode;
@@ -143,19 +145,25 @@ sys_read(ssize_t * retval, int fd, void* buf, size_t buflen)
         /* read from the file */
         int error = VOP_READ(file, &u);
         if (error) {
-                return error; /* handles EIO */
+                /* handles EIO */
+                goto exit;
         }
         /* safely copy the data into the user buffer */
         error = copyout(kbuf, buf, buflen);
-        if (error) /* handles EFAULT */
-		return error;
+        if (error) {
+                /* handles EFAULT */
+                goto exit;
+        }
 
         /* advance seek position */
         file_table[fd]->offset += (buflen - u.uio_resid);
 
         /* return number of bytes read */
         *retval = (buflen - u.uio_resid);
-	return 0;
+
+ exit:
+        lock_release(file_table[fd]->fte_lock);
+        return error;
 }
 
 /*
@@ -199,6 +207,8 @@ sys_write(ssize_t *retval, int fd, const void *buf, size_t nbytes)
                 return EBADF;
         }
 
+        lock_acquire(file_table[fd]->fte_lock);
+
         /* acquire file info */
         off_t offset = file_table[fd]->offset;
         struct vnode * file = file_table[fd]->vnode;
@@ -207,7 +217,8 @@ sys_write(ssize_t *retval, int fd, const void *buf, size_t nbytes)
         char kbuf[nbytes];
         int error = copyin(buf, kbuf, nbytes);
         if (error) {
-                return error; /* handles EFAULT */
+                /* handles EFAULT */
+                goto exit;
         }
 
         /* Initialize a uio suitable for I/O from a kernel buffer. */
@@ -218,7 +229,7 @@ sys_write(ssize_t *retval, int fd, const void *buf, size_t nbytes)
         /* write to the file */
         error = VOP_WRITE(file, &u);
         if (error) {
-                return error;
+                goto exit;
         }
 
         /* advance seek position */
@@ -226,7 +237,11 @@ sys_write(ssize_t *retval, int fd, const void *buf, size_t nbytes)
 
         /* return number of bytes written */
         *retval = (nbytes - u.uio_resid);
-	return 0;
+
+ exit:
+        lock_release(file_table[fd]->fte_lock);
+        return error;
+
 }
 
 int
