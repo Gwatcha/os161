@@ -64,7 +64,6 @@ struct proc *kproc;
  */
 struct file_table_entry* file_table_entry_create(int open_flags, struct vnode* vnode) {
 
-        /* FIXME memory leak!!!!!!! */
         struct file_table_entry* fte = kmalloc(sizeof(struct file_table_entry));
 
         spinlock_init(&fte->fte_lock);

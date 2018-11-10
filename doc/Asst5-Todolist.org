@@ -19,5 +19,6 @@
 * TODO Code style improvements
 ** TODO Add comments somewhere? Refractor?
 
-* TODO Check for memory leaks with kdump. There's one at the FIXME in proc_table_entry create, if that hasn't been fixed yet.
+* TODO Check for memory leaks with kdump
+** DONE Fix file_table_entry leak
 
