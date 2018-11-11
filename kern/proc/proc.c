@@ -130,8 +130,8 @@ file_table_copy(file_table* file_table_in, file_table* file_table_out) {
 }
 
 static
-int
-open_console(struct proc* p, int fd, int flags) {
+struct file_table_entry*
+open_console(int flags) {
 
         char buffer[16];
         strcpy(buffer, "con:");
@@ -139,17 +139,13 @@ open_console(struct proc* p, int fd, int flags) {
         struct vnode* file_vnode;
         int error = vfs_open(buffer, flags, 0, &file_vnode);
 
-	if (error) { /* assumption: handles rest of errors  */
-		return error;
-	}
+        if (error) {
+                return NULL;
+        }
 
-	/* Create the file's vnode through vfs_open. */
-        struct file_table_entry** file_table = p->p_file_table;
 
 	/* Create a file table entry at fd with vnode and specified flags */
-        file_table[fd] = file_table_entry_create(flags, file_vnode);
-
-        return 0;
+        return file_table_entry_create(flags, file_vnode);
 }
 
 /*
@@ -335,9 +331,16 @@ proc_create_runprogram(const char *name)
 	}
 	spinlock_release(&curproc->p_lock);
 
-        open_console(newproc, STDIN_FILENO, O_RDONLY);
-        open_console(newproc, STDOUT_FILENO, O_WRONLY);
-        open_console(newproc, STDERR_FILENO, O_WRONLY);
+        file_table* file_table = &newproc->p_file_table;
+
+        /* Open stdin */
+        (*file_table)[STDIN_FILENO] = open_console(O_RDONLY);
+
+        /* Open stdout and stderr */
+        struct file_table_entry* console_out = open_console(O_WRONLY);
+        (*file_table)[STDOUT_FILENO] = console_out;
+        (*file_table)[STDERR_FILENO] = console_out;
+        console_out->refcount = 2;
 
 	return newproc;
 }
