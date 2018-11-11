@@ -14,8 +14,8 @@ There's an apparent contradiction in the requirements
 https://piazza.com/class/jlpfhk5mesk6s0?cid=932
 
 
-* TODO crash    2 points
-** TODO Proper exit codes for crashed processes, currently the parent reads signal 2 everytime! :o
+* DONE crash    2 points
+** DONE Proper exit codes for crashed processes, currently the parent reads signal 2 everytime! :o
 
 * DONE faulter  2 points
 ** DONE Works but returns signal 2
