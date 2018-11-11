@@ -126,10 +126,6 @@ sys_read(ssize_t * retval, int fd, void* buf, size_t buflen)
                 return EBADF;
         }
 
-        if (buf == NULL) {
-    		return EFAULT;
-        }
-
         lock_acquire(file_table[fd]->fte_lock);
 
         /* acquire file info */
@@ -137,21 +133,14 @@ sys_read(ssize_t * retval, int fd, void* buf, size_t buflen)
         struct vnode * file = file_table[fd]->vnode;
 
         /* Initialize a uio suitable for I/O from a kernel buffer. */
-        char kbuf[buflen];
         struct iovec iov;
         struct uio u;
-        uio_kinit(&iov, &u, kbuf, buflen, offset, UIO_READ);
+        uio_kinit(&iov, &u, buf, buflen, offset, UIO_READ);
 
         /* read from the file */
         int error = VOP_READ(file, &u);
         if (error) {
                 /* handles EIO */
-                goto exit;
-        }
-        /* safely copy the data into the user buffer */
-        error = copyout(kbuf, buf, buflen);
-        if (error) {
-                /* handles EFAULT */
                 goto exit;
         }
 
@@ -213,21 +202,13 @@ sys_write(ssize_t *retval, int fd, const void *buf, size_t nbytes)
         off_t offset = file_table[fd]->offset;
         struct vnode * file = file_table[fd]->vnode;
 
-        /* copy the user data in */
-        char kbuf[nbytes];
-        int error = copyin(buf, kbuf, nbytes);
-        if (error) {
-                /* handles EFAULT */
-                goto exit;
-        }
-
         /* Initialize a uio suitable for I/O from a kernel buffer. */
         struct iovec iov;
         struct uio u;
-        uio_kinit(&iov, &u, kbuf, nbytes, offset, UIO_WRITE);
+        uio_kinit(&iov, &u, (char*)buf, nbytes, offset, UIO_WRITE);
 
         /* write to the file */
-        error = VOP_WRITE(file, &u);
+        int error = VOP_WRITE(file, &u);
         if (error) {
                 goto exit;
         }
