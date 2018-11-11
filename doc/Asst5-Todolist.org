@@ -22,8 +22,12 @@ https://piazza.com/class/jlpfhk5mesk6s0?cid=932
 I believe it should return signal 2.
  Signal 2 is address error on load, and faulter loads an unallocated address.
 
-* TODO multiexec 2 points
-** TODO Not passing, need to add synchronization on argv or something
+* DONE multiexec 2 points
+CLOSED: [2018-11-10 Sat 17:21]
+** DONE Not passing, need to add synchronization on argv or something
+CLOSED: [2018-11-10 Sat 17:21]
+
+Appears to be working
 
 * TODO Code style improvements
 ** TODO Add comments somewhere? Refractor?
