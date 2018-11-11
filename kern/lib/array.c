@@ -95,6 +95,7 @@ array_preallocate(struct array *a, unsigned num)
 		 * about this and/or kmalloc makes it not worthwhile?)
 		 */
 
+                /* FIXME memory leak after running bigexec, at addr 0x8004d840 (32 bytes) */
 		newptr = kmalloc(newmax*sizeof(*a->v));
 		if (newptr == NULL) {
 			return ENOMEM;
