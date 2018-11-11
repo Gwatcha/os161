@@ -17,8 +17,10 @@ https://piazza.com/class/jlpfhk5mesk6s0?cid=932
 * TODO crash    2 points
 ** TODO Proper exit codes for crashed processes, currently the parent reads signal 2 everytime! :o
 
-* TODO faulter  2 points
-** TODO Works but returns signal 2!
+* DONE faulter  2 points
+** DONE Works but returns signal 2
+I believe it should return signal 2.
+ Signal 2 is address error on load, and faulter loads an unallocated address.
 
 * TODO multiexec 2 points
 ** TODO Not passing, need to add synchronization on argv or something
