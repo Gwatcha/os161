@@ -4,12 +4,12 @@
 * DONE bigfile  2 points
 * DONE farm     2 points
 
-* TODO badcall  10 points
+* DONE badcall  10 points
 
 ** DONE execv
 *** DONE Wrong exit code of subprocess
 
-** TODO fork
+** DONE fork
 There's an apparent contradiction in the requirements
 https://piazza.com/class/jlpfhk5mesk6s0?cid=932
 
