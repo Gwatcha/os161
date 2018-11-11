@@ -314,6 +314,19 @@ sys_waitpid(pid_t* retval, pid_t pid, int *status, int options) {
          */
 
         pid_lock_acquire(pid);
+
+        if (proc_get_parent(pid) != curpid) {
+                /*
+                 * This can occur under the following circumstances:
+                 * 1. The child exits
+                 * 2. The parent calls waitpid, freeing the child's proc table entry
+                 * 3. The parent calls waitpid a second time, and the pid is used by
+                 *    a new process that is not the child of the parent
+                 */
+                pid_lock_release(pid);
+                return ECHILD;
+        }
+
         const int exit_status = proc_wait_on_pid(pid);
         pid_lock_release(pid);
 
@@ -372,11 +385,23 @@ sys__exit(int exitcode) {
 
                 pid_lock_acquire(child_pid);
 
-                /* child's proc table entry should exist until its parent exits */
-                KASSERTM(proc_table_entry_exists(child_pid), "pid %d", child_pid);
+                if (!proc_table_entry_exists(child_pid)) {
+                        /*
+                         * The child's proc_table entry has been removed, which
+                         * occurs when the parent collects its status.
+                         */
+                        pid_lock_release(child_pid);
+                        continue;
+                }
 
-                /* this process should be the parent of its children */
-                KASSERTM(proc_get_parent(child_pid) == curpid, "pid %d", child_pid);
+                if (proc_get_parent(child_pid) != curpid) {
+                        /*
+                         * The child's pid has been recycled. This may occur when
+                         * the parent collects its status.
+                         */
+                        pid_lock_release(child_pid);
+                        continue;
+                }
 
                 if (proc_has_exited(child_pid)) {
 

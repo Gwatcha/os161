@@ -30,7 +30,7 @@ proc_table_entry_create(pid_t pid, const pid_t parent_pid /* may be INVALID_PID 
         {
                 char buf[64];
                 snprintf(buf, sizeof(buf), "waitpid_cv_%d", pid);
-                pte->pte_waitpid_cv = cv_create("");
+                pte->pte_waitpid_cv = cv_create(buf);
         }
 
 
@@ -134,7 +134,14 @@ int proc_wait_on_pid(pid_t pid) {
         if (!proc_has_exited(pid)) {
                 cv_wait(p_table[pid]->pte_waitpid_cv, pid_locks[pid]);
         }
-        return p_table[pid]->pte_exit_status;
+
+        int exit_status = p_table[pid]->pte_exit_status;
+
+        DEBUG(DB_PROC_TABLE,
+              "remove_proc_table_entry(%d), parent has collected exit status\n", pid);
+
+        remove_proc_table_entry(pid);
+        return exit_status;
 }
 
 void proc_exit(pid_t pid, int status) {
