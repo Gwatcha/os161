@@ -41,7 +41,7 @@
 #include <vm.h>
 
 typedef struct {
-
+        pid_t cme_pid;
 } core_map_entry;
 /*
  * Dumb MIPS-only "VM system" that is intended to only be just barely
