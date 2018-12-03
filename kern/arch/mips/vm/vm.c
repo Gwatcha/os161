@@ -48,6 +48,9 @@ typedef struct {
 static core_map_entry* core_map = NULL;
 static size_t coremap_size_bytes = 0;
 
+static paddr_t firstpaddr = 0;
+static paddr_t lastpaddr = 0;
+
 /*
  * Dumb MIPS-only "VM system" that is intended to only be just barely
  * enough to struggle off the ground. You should replace all of this
@@ -73,6 +76,21 @@ static size_t coremap_size_bytes = 0;
  */
 static struct spinlock stealmem_lock = SPINLOCK_INITIALIZER;
 
+static
+paddr_t
+physical_memory_available()
+{
+        return lastpaddr - firstpaddr;
+}
+
+/* The number of hardware pages available to managed by the vm system */
+static
+size_t
+hardware_pages_available()
+{
+        return physical_memory_available() / PAGE_SIZE;
+}
+
 /*
  * Called in boot sequence.
  */
@@ -81,13 +99,15 @@ vm_bootstrap(void)
 {
         /* On entry, there is no VM yet, so we cannot call kmalloc. */
         /* Instead, we use ram_stealmem. */
-
-
-        /* TODO Initiliaze core map */
         KASSERT(core_map == NULL);
 
-        const size_t num_hardware_pages = mainbus_ramsize() / PAGE_SIZE;
-	DEBUG(DB_VM, "Hardware pages: %zu\n", num_hardware_pages);
+        lastpaddr = ram_getsize();
+        firstpaddr = ram_getfirstfree();
+	DEBUG(DB_VM, "firstpaddr:  %x\n", firstpaddr);
+	DEBUG(DB_VM, "lastpaddr:   %x\n", lastpaddr);
+
+        const size_t num_hardware_pages = hardware_pages_available();
+	DEBUG(DB_VM, "Hardware pages available:  %zu\n", num_hardware_pages);
 
         const size_t coremap_bytes_required = sizeof(core_map_entry) * num_hardware_pages;
 	DEBUG(DB_VM, "Coremap size (bytes): %zu\n", coremap_bytes_required);
@@ -97,54 +117,98 @@ vm_bootstrap(void)
                 + coremap_bytes_required % PAGE_SIZE > 0 ? 1 : 0;
 	DEBUG(DB_VM, "Coremap size (pages): %zu\n", coremap_pages_required);
 
-        core_map = (core_map_entry*)alloc_kpages(coremap_pages_required);
+        const paddr_t core_map_paddr = firstpaddr;
+
+        core_map = (core_map_entry*)PADDR_TO_KVADDR(core_map_paddr);
 
         /* It may be possible to use excess bytes in the coremap pages for other kernel memory, */
         /* but for now let's assume the coremap occupies the entirety of its pages */
         coremap_size_bytes = coremap_pages_required * num_hardware_pages;
 
-        kprintf("coremap: %p\n", core_map);
+        kprintf("coremap:  %p\n", core_map);
         kprintf("&coremap: %p\n", &core_map);
-        kprintf("&coremap_size_bytes: %p\n", &coremap_size_bytes);
 
-        for (size_t i = 0; i < num_hardware_pages; ++i) {
+        for (size_t i = 0; i < coremap_pages_required; ++i) {
+                core_map[i].cme_pid = PID_KERN;
+        }
+        for (size_t i = coremap_pages_required; i < num_hardware_pages; ++i) {
                 core_map[i].cme_pid = PID_INVALID;
         }
 
         /* TODO Initialize page table */
 }
 
+#define UNUSED __attribute__((unused))
+
+static
+UNUSED
+int
+find_free_pages(unsigned npages) {
+
+        const size_t imax = hardware_pages_available() - npages + 1;
+
+        for (size_t i = 0; i < imax; ++i) {
+
+                const size_t jmax = i + npages;
+
+                bool pages_are_available = true;
+                for (size_t j = i; j < jmax; ++j) {
+                        if (core_map[j].cme_pid != PID_INVALID) {
+                                pages_are_available = false;
+                                break;
+                        }
+                }
+                if (pages_are_available) {
+                        return i;
+                }
+        }
+        return -1;
+}
+
 static
 paddr_t
 getppages(unsigned long npages)
 {
-	paddr_t addr;
 	spinlock_acquire(&stealmem_lock);
 
-	addr = ram_stealmem(npages);
+        const int first_page_index = find_free_pages(npages);
 
 	spinlock_release(&stealmem_lock);
-	return addr;
-}
 
+        if (first_page_index == -1) {
+                return 0;
+        }
+
+        const paddr_t pa = firstpaddr + first_page_index * PAGE_SIZE;
+
+	return pa;
+}
 
 /*
  *  Allocates some kernel-space virtual pages.  Kernel TLB mapped VA's must be
- *  in MIPS_KSEG2 [0xc000 0000 - 0xffff ffff]. 
+ *  in MIPS_KSEG2 [0xc000 0000 - 0xffff ffff].
  *  Called by kmalloc.
  */
 vaddr_t
-alloc_kpages(unsigned npages)
+alloc_kpages(int npages)
 {
         /* TODO Find n free pages in the coremap structure */
         /* TODO set them to be used my kernel */
         /* TODO update TLB? or just wait for the fault?  */
 
-	paddr_t pa;
-	pa = getppages(npages);
-	if (pa==0) {
-		return 0;
-	}
+        const int index_of_first_page = find_free_pages(npages);
+
+        if (index_of_first_page == -1) {
+                return 0;
+        }
+
+        const int imax = index_of_first_page + npages;
+        for (int i = index_of_first_page; i < imax; ++i) {
+                core_map[i].cme_pid = PID_KERN;
+        }
+
+        const paddr_t pa = firstpaddr + index_of_first_page * PAGE_SIZE;
+
 	return PADDR_TO_KVADDR(pa);
 }
 
