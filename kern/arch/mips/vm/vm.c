@@ -98,6 +98,13 @@ paddress_of_vm_page(int page_frame)
         return firstpaddr + page_frame * PAGE_SIZE;
 }
 
+static
+paddr_t
+vm_page_of_paddress(paddr_t paddr)
+{
+        return (paddr - firstpaddr) / PAGE_SIZE;
+}
+
 /*
  * Called in boot sequence.
  */
@@ -219,11 +226,13 @@ alloc_kpages(int npages)
  * VA's must be in MIPS_KSEG2 [0xc000 0000 - 0xffff ffff].
  */
 void
-free_kpages(vaddr_t addr)
+free_kpages(vaddr_t vaddr)
 {
-	/* nothing - leak the memory. */
+        const int page = vm_page_of_paddress(KVADDR_TO_PADDR(vaddr));
 
-	(void)addr;
+        spinlock_acquire(&stealmem_lock);
+        core_map[page].cme_pid = PID_INVALID;
+        spinlock_release(&stealmem_lock);
 }
 
 /*
