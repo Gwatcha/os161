@@ -91,6 +91,13 @@ hardware_pages_available()
         return physical_memory_available() / PAGE_SIZE;
 }
 
+static
+paddr_t
+paddress_of_vm_page(int page_frame)
+{
+        return firstpaddr + page_frame * PAGE_SIZE;
+}
+
 /*
  * Called in boot sequence.
  */
@@ -173,13 +180,19 @@ getppages(unsigned long npages)
 
         const int first_page_index = find_free_pages(npages);
 
-	spinlock_release(&stealmem_lock);
-
         if (first_page_index == -1) {
+                spinlock_release(&stealmem_lock);
                 return 0;
         }
 
-        const paddr_t pa = firstpaddr + first_page_index * PAGE_SIZE;
+        const int imax = first_page_index + npages;
+        for (int i = first_page_index; i < imax; ++i) {
+                core_map[i].cme_pid = PID_KERN;
+        }
+
+	spinlock_release(&stealmem_lock);
+
+        const paddr_t pa = paddress_of_vm_page(first_page_index);
 
 	return pa;
 }
@@ -196,18 +209,7 @@ alloc_kpages(int npages)
         /* TODO set them to be used my kernel */
         /* TODO update TLB? or just wait for the fault?  */
 
-        const int index_of_first_page = find_free_pages(npages);
-
-        if (index_of_first_page == -1) {
-                return 0;
-        }
-
-        const int imax = index_of_first_page + npages;
-        for (int i = index_of_first_page; i < imax; ++i) {
-                core_map[i].cme_pid = PID_KERN;
-        }
-
-        const paddr_t pa = firstpaddr + index_of_first_page * PAGE_SIZE;
+        const paddr_t pa = getppages(npages);
 
 	return PADDR_TO_KVADDR(pa);
 }
