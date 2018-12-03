@@ -210,7 +210,7 @@ getppages(unsigned long npages)
  *  Called by kmalloc.
  */
 vaddr_t
-alloc_kpages(int npages)
+alloc_kpages(unsigned npages)
 {
         /* TODO Find n free pages in the coremap structure */
         /* TODO set them to be used my kernel */
