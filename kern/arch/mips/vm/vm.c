@@ -97,15 +97,19 @@ vm_bootstrap(void)
                 + coremap_bytes_required % PAGE_SIZE > 0 ? 1 : 0;
 	DEBUG(DB_VM, "Coremap size (pages): %zu\n", coremap_pages_required);
 
-        core_map = (core_map_entry*)ram_stealmem(coremap_pages_required);
+        core_map = (core_map_entry*)alloc_kpages(coremap_pages_required);
 
         /* It may be possible to use excess bytes in the coremap pages for other kernel memory, */
         /* but for now let's assume the coremap occupies the entirety of its pages */
         coremap_size_bytes = coremap_pages_required * num_hardware_pages;
 
+        kprintf("coremap: %p\n", core_map);
         kprintf("&coremap: %p\n", &core_map);
         kprintf("&coremap_size_bytes: %p\n", &coremap_size_bytes);
 
+        for (size_t i = 0; i < num_hardware_pages; ++i) {
+                core_map[i].cme_pid = PID_INVALID;
+        }
 
         /* TODO Initialize page table */
 }
