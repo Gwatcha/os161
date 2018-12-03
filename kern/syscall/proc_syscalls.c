@@ -223,7 +223,7 @@ sys_fork(pid_t* retval, struct trapframe* trapframe) {
 
         /* Find an unused pid for the child */
         const pid_t child_pid = reserve_pid(curpid);
-        if (child_pid == INVALID_PID) {
+        if (child_pid == PID_INVALID) {
                 pid_lock_release(curpid);
                 return ENPROC;
         }
@@ -369,7 +369,7 @@ sys__exit(int exitcode) {
          * the parent-child relationships from a tree (a graph without cycles)
          */
 
-        if (parent_pid != INVALID_PID) {
+        if (parent_pid != PID_INVALID) {
                 pid_lock_acquire(parent_pid);
         }
         pid_lock_acquire(curpid);
@@ -424,7 +424,7 @@ sys__exit(int exitcode) {
         };
 
         enum parent_status pstatus =
-                parent_pid == INVALID_PID               ? ps_invalid :
+                parent_pid == PID_INVALID               ? ps_invalid :
                 !proc_table_entry_exists(parent_pid)    ? ps_no_entry :
                 proc_has_exited(parent_pid)             ? ps_has_exited :
                 !proc_has_child(parent_pid, curpid)     ? ps_pid_recycled :
@@ -447,7 +447,7 @@ sys__exit(int exitcode) {
         }
 
         pid_lock_release(curpid);
-        if (parent_pid != INVALID_PID) {
+        if (parent_pid != PID_INVALID) {
                 pid_lock_release(parent_pid);
         }
 

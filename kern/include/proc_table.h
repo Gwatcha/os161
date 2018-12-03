@@ -35,9 +35,6 @@
  */
 #include "types.h"
 
-#define INVALID_PID -1
-
-
 void proc_table_init(void);
 
 void pid_lock_acquire(pid_t pid);
@@ -54,7 +51,7 @@ bool proc_has_child(pid_t parent, pid_t child);
 
 const struct array* proc_get_children(pid_t proc);
 
-/* Returns INVALID_PID if the process does not have a parent */
+/* Returns PID_INVALID if the process does not have a parent */
 pid_t proc_get_parent(pid_t proc);
 
 /* Returns the exit status of the process */
@@ -68,7 +65,7 @@ bool proc_has_exited(pid_t proc);
 /*
  * Reserves a new pid and adds it to parent_pid's children (if parent_pid is valid)
  *
- * Returns INVALID_PID if a pid cannot be reserved
+ * Returns PID_INVALID if a pid cannot be reserved
  *
  * parent_pid may be invalid.
  */

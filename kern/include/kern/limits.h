@@ -73,6 +73,8 @@
  * whatever limit is set with setrlimit().
  */
 
+#define __PID_INVALID  -1
+
 /* Min value for a process ID (that can be assigned to a user process) */
 #define __PID_KERN      1
 

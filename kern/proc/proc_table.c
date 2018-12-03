@@ -23,7 +23,7 @@ static struct lock* pid_locks[__PID_MAX] = { NULL };
 
 static
 struct proc_table_entry*
-proc_table_entry_create(pid_t pid, const pid_t parent_pid /* may be INVALID_PID */) {
+proc_table_entry_create(pid_t pid, const pid_t parent_pid /* may be PID_INVALID */) {
 
 	struct proc_table_entry* pte = kmalloc(sizeof(struct proc_table_entry));
 
@@ -57,7 +57,7 @@ proc_table_entry_destroy(struct proc_table_entry* pte) {
 void
 proc_table_init() {
 
-	p_table[PID_KERN] = proc_table_entry_create(PID_KERN, INVALID_PID);
+	p_table[PID_KERN] = proc_table_entry_create(PID_KERN, PID_INVALID);
 
         for (pid_t i = 0; i < __PID_MAX; ++i) {
                 char buf[64];
@@ -123,7 +123,7 @@ proc_get_children(pid_t pid) {
         return &p_table[pid]->pte_child_pids;
 }
 
-/* Returns INVALID_PID if the process does not have a parent */
+/* Returns PID_INVALID if the process does not have a parent */
 pid_t proc_get_parent(pid_t pid) {
         return p_table[pid]->pte_parent_pid;
 }
@@ -157,14 +157,14 @@ bool proc_has_exited(pid_t pid) {
 /*
  * Reserves a new pid and adds it to parent_pid's children (if parent_pid is valid)
  *
- * Returns INVALID_PID if a pid cannot be reserved
+ * Returns PID_INVALID if a pid cannot be reserved
  *
  * parent_pid may be invalid.
  */
 pid_t
 reserve_pid(pid_t parent_pid) {
 
-        if (parent_pid != INVALID_PID) {
+        if (parent_pid != PID_INVALID) {
 
                 /* We add the child pid to its children, so it must be locked */
                 KASSERT(pid_lock_do_i_hold(parent_pid));
@@ -186,7 +186,7 @@ reserve_pid(pid_t parent_pid) {
 
                                 p_table[pid] = proc_table_entry_create(pid, parent_pid);
 
-                                if (parent_pid != INVALID_PID) {
+                                if (parent_pid != PID_INVALID) {
 
                                         proc_add_child(parent_pid, pid);
                                 }
@@ -197,7 +197,7 @@ reserve_pid(pid_t parent_pid) {
                         pid_lock_release(pid);
                 }
         }
-        return INVALID_PID;
+        return PID_INVALID;
 }
 
 
