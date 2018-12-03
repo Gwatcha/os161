@@ -43,6 +43,11 @@
 typedef struct {
         pid_t cme_pid;
 } core_map_entry;
+
+
+static core_map_entry* core_map = NULL;
+static size_t coremap_size_bytes = 0;
+
 /*
  * Dumb MIPS-only "VM system" that is intended to only be just barely
  * enough to struggle off the ground. You should replace all of this
@@ -59,7 +64,6 @@ typedef struct {
  * it's cutting (there are many) and why, and more importantly, how.
  */
 
-static core_map_entry* core_map = NULL;
 /* under dumbvm, always have 72k of user stack */
 /* (this must be > 64K so argument blocks of size ARG_MAX will fit) */
 #define DUMBVM_STACKPAGES    18
@@ -75,10 +79,11 @@ static struct spinlock stealmem_lock = SPINLOCK_INITIALIZER;
 void
 vm_bootstrap(void)
 {
-        /* TODO Initiliaze core map */
-        /* On entry, there is no VM yet (duuuuh), so we can not call kmalloc. */
+        /* On entry, there is no VM yet, so we cannot call kmalloc. */
         /* Instead, we use ram_stealmem. */
 
+
+        /* TODO Initiliaze core map */
         KASSERT(core_map == NULL);
 
         const size_t num_hardware_pages = mainbus_ramsize() / PAGE_SIZE;
@@ -93,6 +98,13 @@ vm_bootstrap(void)
 	DEBUG(DB_VM, "Coremap size (pages): %zu\n", coremap_pages_required);
 
         core_map = (core_map_entry*)ram_stealmem(coremap_pages_required);
+
+        /* It may be possible to use excess bytes in the coremap pages for other kernel memory, */
+        /* but for now let's assume the coremap occupies the entirety of its pages */
+        coremap_size_bytes = coremap_pages_required * num_hardware_pages;
+
+        kprintf("&coremap: %p\n", &core_map);
+        kprintf("&coremap_size_bytes: %p\n", &coremap_size_bytes);
 
 
         /* TODO Initialize page table */
