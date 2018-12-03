@@ -40,10 +40,14 @@
 #include <addrspace.h>
 #include <vm.h>
 
+typedef struct {
 
+} core_map_entry;
+
+static core_map_entry* core_map = NULL;
 
 /*
-* Called in boot sequence. 
+* Called in boot sequence.
 */
 void
 vm_bootstrap(void)
@@ -52,6 +56,15 @@ vm_bootstrap(void)
         /* On entry, there is no VM yet (duuuuh), so we can not call kmalloc. */
         /* Instead, we use ram_stealmem. */
 
+        KASSERT(core_map == NULL);
+
+        const size_t num_hardware_pages = mainbus_ramsize() / PAGE_SIZE;
+
+        const size_t coremap_bytes_required = sizeof(core_map_entry) * num_hardware_pages;
+
+        const size_t coremap_pages_required = 1 + coremap_bytes_required / PAGE_SIZE;
+
+        core_map = (core_map_entry*)ram_stealmem(coremap_pages_required);
 
 
         /* TODO Initialize page table */
