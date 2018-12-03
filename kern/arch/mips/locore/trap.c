@@ -244,8 +244,8 @@ mips_trap(struct trapframe *tf)
 			goto done;
 		}
 		break;
-	case EX_IBE:
-	case EX_DBE:
+	case EX_IBE: /* Bus error on instruction fetch */
+	case EX_DBE: /* Bus error on data access */
 		/*
 		 * This means you loaded invalid TLB entries, or
 		 * touched invalid parts of the direct-mapped
