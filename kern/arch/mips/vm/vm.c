@@ -82,12 +82,15 @@ vm_bootstrap(void)
         KASSERT(core_map == NULL);
 
         const size_t num_hardware_pages = mainbus_ramsize() / PAGE_SIZE;
+	DEBUG(DB_VM, "Hardware pages: %zu\n", num_hardware_pages);
 
         const size_t coremap_bytes_required = sizeof(core_map_entry) * num_hardware_pages;
+	DEBUG(DB_VM, "Coremap size (bytes): %zu\n", coremap_bytes_required);
 
         const size_t coremap_pages_required
                 = coremap_bytes_required / PAGE_SIZE
                 + coremap_bytes_required % PAGE_SIZE > 0 ? 1 : 0;
+	DEBUG(DB_VM, "Coremap size (pages): %zu\n", coremap_pages_required);
 
         core_map = (core_map_entry*)ram_stealmem(coremap_pages_required);
 
