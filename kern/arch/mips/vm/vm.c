@@ -85,7 +85,9 @@ vm_bootstrap(void)
 
         const size_t coremap_bytes_required = sizeof(core_map_entry) * num_hardware_pages;
 
-        const size_t coremap_pages_required = 1 + coremap_bytes_required / PAGE_SIZE;
+        const size_t coremap_pages_required
+                = coremap_bytes_required / PAGE_SIZE
+                + coremap_bytes_required % PAGE_SIZE > 0 ? 1 : 0;
 
         core_map = (core_map_entry*)ram_stealmem(coremap_pages_required);
 
