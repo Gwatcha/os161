@@ -139,8 +139,8 @@ vm_bootstrap(void)
         /* but for now let's assume the coremap occupies the entirety of its pages */
         coremap_size_bytes = coremap_pages_required * num_hardware_pages;
 
-        kprintf("coremap:  %p\n", core_map);
-        kprintf("&coremap: %p\n", &core_map);
+        DEBUG(DB_VM, "coremap:  %p\n", core_map);
+        DEBUG(DB_VM, "&coremap: %p\n", &core_map);
 
         for (size_t i = 0; i < coremap_pages_required; ++i) {
                 core_map[i].cme_pid = PID_KERN;
