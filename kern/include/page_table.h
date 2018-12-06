@@ -84,6 +84,7 @@ void page_table_resize(page_table*, const unsigned capacity);
 
 float page_table_load_factor(const page_table*);
 
+bool page_table_contains(const page_table* pt, vpage_t vpage);
 
 ppage_t page_table_read(const page_table* pt, vpage_t vpage);
 

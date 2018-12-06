@@ -181,6 +181,23 @@ page_table_find_slot(const page_table* pt, vpage_t vpage)
         return i;
 }
 
+bool
+page_table_contains(const page_table* pt, vpage_t vpage)
+{
+        KASSERT(pt != NULL);
+
+        const page_mapping* mappings = pt->pt_mappings;
+
+        const int i = page_table_find_slot(pt, vpage);
+
+        if (page_mapping_is_occupied(mappings + i)) {
+                /* Key found */
+                return true;
+        }
+        /* Key not found */
+        return false;
+}
+
 ppage_t
 page_table_read(const page_table* pt, vpage_t vpage)
 {
