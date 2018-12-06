@@ -152,8 +152,6 @@ vm_bootstrap(void)
         /* TODO Initialize page table */
 }
 
-#define UNUSED __attribute__((unused))
-
 static
 UNUSED
 int

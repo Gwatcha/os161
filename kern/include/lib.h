@@ -201,6 +201,7 @@ void kprintf_bootstrap(void);
 /*
  * Other miscellaneous stuff
  */
+#define UNUSED __attribute__((unused))
 
 #define DIVROUNDUP(a,b) (((a)+(b)-1)/(b))
 #define ROUNDUP(a,b)    (DIVROUNDUP(a,b)*b)
