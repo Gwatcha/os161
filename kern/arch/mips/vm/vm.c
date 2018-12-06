@@ -152,9 +152,7 @@ vm_bootstrap(void)
         const size_t coremap_bytes_required = sizeof(core_map_entry) * num_hardware_pages;
 	DEBUG(DB_VM, "Coremap size (bytes): %zu\n", coremap_bytes_required);
 
-        const size_t coremap_pages_required
-                = coremap_bytes_required / PAGE_SIZE
-                + coremap_bytes_required % PAGE_SIZE > 0 ? 1 : 0;
+        const size_t coremap_pages_required = size_to_page_count(coremap_bytes_required);
 	DEBUG(DB_VM, "Coremap size (pages): %zu\n", coremap_pages_required);
 
         const paddr_t core_map_paddr = firstpaddr;
