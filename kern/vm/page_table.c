@@ -36,6 +36,18 @@ page_mapping_is_occupied(const page_mapping* pm)
         return pm->pm_ppage != PPAGE_INVALID;
 }
 
+void
+page_table_init_with_buffer(page_table* pt,
+                            page_mapping* mappings,
+                            unsigned capacity,
+                            bool owns_mappings) {
+        pt->pt_mappings = mappings;
+        pt->pt_capacity = capacity;
+        pt->pt_count = 0;
+        pt->pt_owns_mappings = owns_mappings;
+        pt->pt_resize_pending = false;
+}
+
 static
 page_mapping*
 page_mappings_create(unsigned capacity)
@@ -52,31 +64,42 @@ page_mappings_create(unsigned capacity)
 }
 
 void
-page_table_init(page_table* pt)
+page_table_init_with_capacity(page_table* pt, unsigned capacity)
 {
-        pt->pt_mappings = NULL;
-        pt->pt_capacity = 0;
+        pt->pt_mappings = page_mappings_create(capacity);
+        pt->pt_capacity = capacity;
         pt->pt_count = 0;
-        pt->pt_mappings_owned = false;
+        pt->pt_owns_mappings = true;
         pt->pt_resize_pending = false;
 }
 
-page_table*
-page_table_create()
+void
+page_table_init(page_table* pt)
+{
+        page_table_init_with_capacity(pt, PAGE_TABLE_CAPACITY_MIN);
+
+}
+
+page_table* page_table_create_with_capacity(unsigned capacity)
 {
         page_table* pt = (page_table*)kmalloc(sizeof(page_table));
         if (pt == NULL) {
                 return NULL;
         }
-
-        page_table_init(pt);
+        page_table_init_with_capacity(pt, capacity);
         return pt;
+}
+
+page_table*
+page_table_create()
+{
+        return page_table_create_with_capacity(PAGE_TABLE_CAPACITY_MIN);
 }
 
 void
 page_table_cleanup(page_table* pt)
 {
-        if (pt->pt_mappings_owned) {
+        if (pt->pt_owns_mappings) {
                 kfree(pt->pt_mappings);
         }
         pt->pt_mappings = NULL;
@@ -110,12 +133,12 @@ page_table_resize(page_table* pt, unsigned capacity)
         page_mapping* old_mappings = pt->pt_mappings;
         const unsigned old_capacity = pt->pt_capacity;
         const unsigned old_count = pt->pt_capacity;
-        const unsigned old_mappings_owned = pt->pt_mappings_owned;
+        const unsigned old_mappings_owned = pt->pt_owns_mappings;
 
         pt->pt_mappings = page_mappings_create(capacity);
         pt->pt_capacity = capacity;
         pt->pt_count = 0; // We'll be adding the elements back one by one
-        pt->pt_mappings_owned = true;
+        pt->pt_owns_mappings = true;
 
         for (unsigned i = 0; i < old_capacity; ++i) {
                 const page_mapping* mapping = old_mappings + i;

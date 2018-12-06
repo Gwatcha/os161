@@ -53,13 +53,24 @@ typedef struct {
         unsigned pt_count; /* number of page mappings, not of buckets */
 
         /* Is the memory of the pt_mappings array owned? */
-        bool pt_mappings_owned;
+        /* If so it must be freed */
+        bool pt_owns_mappings;
 
-        /* Is a resize pending? Prevents us from getting into a recursive resize loop */
+        /* Is a resize pending? Used to prevent recursive resize loop */
         bool pt_resize_pending;
 } page_table ;
 
+
+void page_table_init_with_buffer(page_table*,
+                                 page_mapping* mappings,
+                                 unsigned capacity,
+                                 bool owns_mappings);
+
+void page_table_init_with_capacity(page_table*, unsigned capacity);
+
 void page_table_init(page_table*);
+
+page_table* page_table_create_with_capacity(unsigned capacity);
 
 page_table* page_table_create(void);
 
