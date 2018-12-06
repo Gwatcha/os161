@@ -161,6 +161,7 @@ page_table_resize(page_table* pt, unsigned capacity)
 float
 page_table_load_factor(const page_table* pt)
 {
+        KASSERT(pt != NULL);
         return pt->pt_capacity <= 0 ? 1.f : (float)pt->pt_count / pt->pt_capacity;
 }
 
