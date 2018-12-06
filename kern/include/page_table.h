@@ -27,8 +27,8 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _PROC_TABLE_H_
-#define _PROC_TABLE_H_
+#ifndef _PAGE_TABLE_H_
+#define _PAGE_TABLE_H_
 
 #define PAGE_TABLE_LOAD_FACTOR_MAX 0.7
 #define PAGE_TABLE_LOAD_FACTOR_MIN 0.1
@@ -58,7 +58,7 @@ typedef struct {
 
         /* Is a resize pending? Used to prevent recursive resize loop */
         bool pt_resize_pending;
-} page_table ;
+} page_table;
 
 
 void page_table_init_with_buffer(page_table*,
@@ -89,4 +89,4 @@ void page_table_write(page_table* pt, vpage_t vpage, ppage_t ppage);
 
 void page_table_remove(page_table* pt, vpage_t vpage);
 
-#endif /* _PROC_TABLE_H_ */
+#endif /* _PAGE_TABLE_H_ */
