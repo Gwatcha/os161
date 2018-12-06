@@ -205,5 +205,9 @@ void kprintf_bootstrap(void);
 #define DIVROUNDUP(a,b) (((a)+(b)-1)/(b))
 #define ROUNDUP(a,b)    (DIVROUNDUP(a,b)*b)
 
+static inline unsigned max(unsigned a, unsigned b)
+{
+        return a > b ? a : b;
+}
 
 #endif /* _LIB_H_ */

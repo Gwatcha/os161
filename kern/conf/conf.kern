@@ -338,7 +338,8 @@ file      proc/proc_table.c
 # (you will probably want to add stuff here while doing the VM assignment)
 #
 
-file      vm/kmalloc.c
+file                vm/kmalloc.c
+optfile generic     vm/page_table.c
 
 # optofffile dumbvm   vm/addrspace.c
 
