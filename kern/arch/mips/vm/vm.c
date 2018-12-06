@@ -71,6 +71,8 @@ static paddr_t lastpaddr = 0;
 /* (this must be > 64K so argument blocks of size ARG_MAX will fit) */
 #define DUMBVM_STACKPAGES    18
 
+#define PAGE_SIZE_LOG_2 12
+
 /*
  * Wrap ram_stealmem in a spinlock.
  */
@@ -103,6 +105,30 @@ paddr_t
 vm_page_of_paddress(paddr_t paddr)
 {
         return (paddr - firstpaddr) / PAGE_SIZE;
+}
+
+static
+UNUSED
+page_t
+addr_to_page(unsigned addr)
+{
+        return addr >> PAGE_SIZE_LOG_2;
+}
+
+static
+UNUSED
+unsigned
+page_to_addr(page_t page)
+{
+        return page << PAGE_SIZE_LOG_2;
+}
+
+static
+UNUSED
+page_t
+size_to_page_count(size_t size)
+{
+	return addr_to_page(size + PAGE_SIZE - 1);
 }
 
 /*
