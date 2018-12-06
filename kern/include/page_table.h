@@ -35,16 +35,18 @@
 #define PAGE_TABLE_CAPACITY_MIN 8
 #define PAGE_TABLE_GROWTH_FACTOR 2
 
+#define VPAGE_INVALID -1
 #define PPAGE_INVALID -1
 
 #include <types.h>
 
-typedef int ppage_t;
-typedef int vpage_t;
+typedef int page_t;
+typedef page_t ppage_t;
+typedef page_t vpage_t;
 
 typedef struct page_mapping {
-        ppage_t pm_ppage; /* The physical page number */
         vpage_t pm_vpage; /* The virtual page number */
+        ppage_t pm_ppage; /* The physical page number */
 } page_mapping;
 
 typedef struct {

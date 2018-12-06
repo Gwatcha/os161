@@ -19,21 +19,21 @@ static
 void
 page_mapping_set_empty(page_mapping* pm)
 {
-        pm->pm_ppage = PPAGE_INVALID;
+        pm->pm_vpage = VPAGE_INVALID;
 }
 
 static
 bool
 page_mapping_is_empty(const page_mapping* pm)
 {
-        return pm->pm_ppage == PPAGE_INVALID;
+        return pm->pm_vpage == VPAGE_INVALID;
 }
 
 static
 bool
 page_mapping_is_occupied(const page_mapping* pm)
 {
-        return pm->pm_ppage != PPAGE_INVALID;
+        return pm->pm_vpage != VPAGE_INVALID;
 }
 
 void
