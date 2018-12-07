@@ -38,6 +38,7 @@
 #include <current.h>
 #include <mips/tlb.h>
 #include <addrspace.h>
+#include <page_table.h>
 #include <vm.h>
 
 typedef struct {
@@ -46,10 +47,9 @@ typedef struct {
 
 
 static core_map_entry* core_map = NULL;
-static size_t coremap_size_bytes = 0;
 
-static paddr_t firstpaddr = 0;
-static paddr_t lastpaddr = 0;
+static ppage_t coremap_first_page = 0; /* Index of the first page frame available */
+static ppage_t coremap_last_page = 0;  /* One past the last page frame available */
 
 /*
  * Dumb MIPS-only "VM system" that is intended to only be just barely
@@ -78,34 +78,23 @@ static paddr_t lastpaddr = 0;
  */
 static struct spinlock stealmem_lock = SPINLOCK_INITIALIZER;
 
-static
-paddr_t
-physical_memory_available()
-{
-        return lastpaddr - firstpaddr;
-}
 
-/* The number of hardware pages available to managed by the vm system */
+/* The number of hardware pages available to the vm system */
 static
 size_t
 hardware_pages_available()
 {
-        return physical_memory_available() / PAGE_SIZE;
+        return coremap_last_page - coremap_first_page;
 }
 
 static
+UNUSED
 paddr_t
-paddress_of_vm_page(int page_frame)
+physical_memory_available()
 {
-        return firstpaddr + page_frame * PAGE_SIZE;
+        return hardware_pages_available() * PAGE_SIZE;
 }
 
-static
-paddr_t
-vm_page_of_paddress(paddr_t paddr)
-{
-        return (paddr - firstpaddr) / PAGE_SIZE;
-}
 
 static
 UNUSED
@@ -141,35 +130,39 @@ vm_bootstrap(void)
         /* Instead, we use ram_stealmem. */
         KASSERT(core_map == NULL);
 
-        lastpaddr = ram_getsize();
-        firstpaddr = ram_getfirstfree();
-	DEBUG(DB_VM, "firstpaddr:  %x\n", firstpaddr);
-	DEBUG(DB_VM, "lastpaddr:   %x\n", lastpaddr);
+        const paddr_t last_paddr = ram_getsize();
+        const paddr_t first_paddr = ram_getfirstfree();
+	DEBUG(DB_VM, "first_paddr:  %x\n", first_paddr);
+	DEBUG(DB_VM, "last_paddr:   %x\n", last_paddr);
 
-        const size_t num_hardware_pages = hardware_pages_available();
+        coremap_first_page = addr_to_page(first_paddr);
+        coremap_last_page = addr_to_page(last_paddr);
+	DEBUG(DB_VM, "coremap_first_page:  %d\n", coremap_first_page);
+	DEBUG(DB_VM, "coremap_last_page:   %d\n", coremap_last_page);
+
+        const page_t num_hardware_pages = hardware_pages_available();
 	DEBUG(DB_VM, "Hardware pages available:  %zu\n", num_hardware_pages);
 
         const size_t coremap_bytes_required = sizeof(core_map_entry) * num_hardware_pages;
 	DEBUG(DB_VM, "Coremap size (bytes): %zu\n", coremap_bytes_required);
 
-        const size_t coremap_pages_required = size_to_page_count(coremap_bytes_required);
+        const page_t coremap_pages_required = size_to_page_count(coremap_bytes_required);
 	DEBUG(DB_VM, "Coremap size (pages): %zu\n", coremap_pages_required);
 
-        const paddr_t core_map_paddr = firstpaddr;
+        const paddr_t core_map_paddr = first_paddr;
 
         core_map = (core_map_entry*)PADDR_TO_KVADDR(core_map_paddr);
 
         /* It may be possible to use excess bytes in the coremap pages for other kernel memory, */
         /* but for now let's assume the coremap occupies the entirety of its pages */
-        coremap_size_bytes = coremap_pages_required * num_hardware_pages;
 
         DEBUG(DB_VM, "coremap:  %p\n", core_map);
         DEBUG(DB_VM, "&coremap: %p\n", &core_map);
 
-        for (size_t i = 0; i < coremap_pages_required; ++i) {
+        for (ppage_t i = 0; i < coremap_pages_required; ++i) {
                 core_map[i].cme_pid = PID_KERN;
         }
-        for (size_t i = coremap_pages_required; i < num_hardware_pages; ++i) {
+        for (ppage_t i = coremap_pages_required; i < num_hardware_pages; ++i) {
                 core_map[i].cme_pid = PID_INVALID;
         }
 
@@ -200,28 +193,39 @@ find_free_pages(unsigned npages)
 }
 
 static
-paddr_t
-getppages(unsigned long npages)
+UNUSED
+page_t
+claim_free_pages(unsigned npages)
 {
 	spinlock_acquire(&stealmem_lock);
 
-        const int first_page_index = find_free_pages(npages);
+        const page_t first_page_index = find_free_pages(npages);
 
-        if (first_page_index == -1) {
+        if (first_page_index == PPAGE_INVALID) {
                 spinlock_release(&stealmem_lock);
-                return 0;
+                return PPAGE_INVALID;
         }
 
-        const int imax = first_page_index + npages;
-        for (int i = first_page_index; i < imax; ++i) {
+        const page_t imax = first_page_index + npages;
+        for (page_t i = first_page_index; i < imax; ++i) {
                 core_map[i].cme_pid = PID_KERN;
         }
 
 	spinlock_release(&stealmem_lock);
 
-        const paddr_t pa = paddress_of_vm_page(first_page_index);
+	return first_page_index;
+}
 
-	return pa;
+static
+paddr_t
+getppages(unsigned long npages)
+{
+        const int first_page_index = claim_free_pages(npages);
+
+        if (first_page_index == PPAGE_INVALID) {
+                return 0;
+        }
+        return page_to_addr(first_page_index + coremap_first_page);
 }
 
 /*
@@ -248,10 +252,10 @@ alloc_kpages(unsigned npages)
 void
 free_kpages(vaddr_t vaddr)
 {
-        const int page = vm_page_of_paddress(KVADDR_TO_PADDR(vaddr));
+        const ppage_t page = addr_to_page(KVADDR_TO_PADDR(vaddr));
 
         spinlock_acquire(&stealmem_lock);
-        core_map[page].cme_pid = PID_INVALID;
+        core_map[page - coremap_first_page].cme_pid = PID_INVALID;
         spinlock_release(&stealmem_lock);
 }
 
