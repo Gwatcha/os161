@@ -290,21 +290,13 @@ vm_tlbshootdown(const struct tlbshootdown *ts)
 int
 vm_fault(int faulttype, vaddr_t faultaddress)
 {
-	vaddr_t vbase1, vtop1, vbase2, vtop2, stackbase, stacktop;
-	paddr_t paddr;
-	int i;
-	uint32_t ehi, elo;
-	struct addrspace *as;
-	int spl;
-
 	faultaddress &= PAGE_FRAME;
-	DEBUG(DB_VM, "smartvm: fault: 0x%x\n", faultaddress);
 
 	switch (faulttype) {
 	    case VM_FAULT_READONLY:
                     /* TODO */
 		/* We always create pages read-write, so we can't get this */
-		panic("dumbvm: got VM_FAULT_READONLY\n");
+		panic("vm: got VM_FAULT_READONLY\n");
 	    case VM_FAULT_READ:
 	    case VM_FAULT_WRITE:
 		break;
@@ -321,7 +313,9 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		return EFAULT;
 	}
 
-	as = proc_getas();
+        const pid_t pid = curproc->p_pid;
+
+	struct addrspace* as = proc_getas();
 	if (as == NULL) {
 		/*
 		 * No address space set up. This is probably also a
@@ -330,60 +324,45 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		return EFAULT;
 	}
 
-	/* Assert that the address space has been set up properly. */
-	KASSERT(as->as_vbase1 != 0);
-	KASSERT(as->as_pbase1 != 0);
-	KASSERT(as->as_npages1 != 0);
-	KASSERT(as->as_vbase2 != 0);
-	KASSERT(as->as_pbase2 != 0);
-	KASSERT(as->as_npages2 != 0);
-	KASSERT(as->as_stackpbase != 0);
-	KASSERT((as->as_vbase1 & PAGE_FRAME) == as->as_vbase1);
-	KASSERT((as->as_pbase1 & PAGE_FRAME) == as->as_pbase1);
-	KASSERT((as->as_vbase2 & PAGE_FRAME) == as->as_vbase2);
-	KASSERT((as->as_pbase2 & PAGE_FRAME) == as->as_pbase2);
-	KASSERT((as->as_stackpbase & PAGE_FRAME) == as->as_stackpbase);
+        const page_table* pt = &as->as_page_table;
 
-	vbase1 = as->as_vbase1;
-	vtop1 = vbase1 + as->as_npages1 * PAGE_SIZE;
-	vbase2 = as->as_vbase2;
-	vtop2 = vbase2 + as->as_npages2 * PAGE_SIZE;
-	stackbase = USERSTACK - DUMBVM_STACKPAGES * PAGE_SIZE;
-	stacktop = USERSTACK;
+        const vpage_t vpage = addr_to_page(faultaddress);
 
-	if (faultaddress >= vbase1 && faultaddress < vtop1) {
-		paddr = (faultaddress - vbase1) + as->as_pbase1;
-	}
-	else if (faultaddress >= vbase2 && faultaddress < vtop2) {
-		paddr = (faultaddress - vbase2) + as->as_pbase2;
-	}
-	else if (faultaddress >= stackbase && faultaddress < stacktop) {
-		paddr = (faultaddress - stackbase) + as->as_stackpbase;
-	}
-	else {
-		return EFAULT;
-	}
+        if (!page_table_contains(pt, vpage)) {
+                return EFAULT;
+        }
 
-	/* make sure it's page-aligned */
-	KASSERT((paddr & PAGE_FRAME) == paddr);
+        ppage_t ppage = page_table_read(pt, vpage);
+        if (ppage == PPAGE_INVALID) {
+                ppage = claim_free_pages(1) + coremap_first_page;
+                if (ppage == PPAGE_INVALID) {
+                        kprintf("vm: Ran out of memory!\n");
+                        return ENOMEM;
+                }
+        }
+
+        const paddr_t paddr = page_to_addr(ppage);
 
 	/* Disable interrupts on this CPU while frobbing the TLB. */
-	spl = splhigh();
+	int spl = splhigh();
 
-	for (i=0; i<NUM_TLB; i++) {
+	for (int i = 0; i < NUM_TLB; i++) {
+
+                uint32_t ehi, elo;
+
 		tlb_read(&ehi, &elo, i);
 		if (elo & TLBLO_VALID) {
 			continue;
 		}
-		ehi = faultaddress;
+		ehi = faultaddress | pid;
 		elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
-		DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress, paddr);
+		DEBUG(DB_VM, "vm: 0x%x -> 0x%x\n", faultaddress, paddr);
 		tlb_write(ehi, elo, i);
 		splx(spl);
 		return 0;
 	}
 
-	kprintf("dumbvm: Ran out of TLB entries - cannot handle page fault\n");
+	kprintf("vm: Ran out of TLB entries - cannot handle page fault\n");
 	splx(spl);
 	return EFAULT;
 }
@@ -391,18 +370,18 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 struct addrspace *
 as_create(void)
 {
+        DEBUG(DB_VM, "vm: as_create()\n");
+
 	struct addrspace *as = kmalloc(sizeof(struct addrspace));
 	if (as==NULL) {
 		return NULL;
 	}
 
-	as->as_vbase1 = 0;
-	as->as_pbase1 = 0;
-	as->as_npages1 = 0;
-	as->as_vbase2 = 0;
-	as->as_pbase2 = 0;
-	as->as_npages2 = 0;
-	as->as_stackpbase = 0;
+
+        /* My best guess for now of a good initial capacity */
+        page_table_init_with_capacity(&as->as_page_table, 32);
+
+        DEBUG(DB_VM, "vm: as_create() succeeds\n");
 
 	return as;
 }
@@ -440,46 +419,56 @@ as_deactivate(void)
 	/* nothing */
 }
 
+static
+void
+reserve_vpage(page_table* pt, vpage_t vpage)
+{
+        KASSERTM(!page_table_contains(pt, vpage),
+                 "Page table already contains an entry for %x", vpage);
+
+        DEBUG(DB_VM, "vm: reserve vpage %x\n", vpage);
+
+        /*
+         * Write an invalid ppage:
+         * actual pages frames are allocated when the memory is accessed
+         */
+        page_table_write(pt, vpage, PPAGE_INVALID);
+}
+
 int
-as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
+as_define_region(struct addrspace *as, vaddr_t vaddr, size_t size,
 		 int readable, int writeable, int executable)
 {
-	size_t npages;
+        KASSERT(as != NULL);
 
-	/* Align the region. First, the base... */
-	sz += vaddr & ~(vaddr_t)PAGE_FRAME;
-	vaddr &= PAGE_FRAME;
-
-	/* ...and now the length. */
-	sz = (sz + PAGE_SIZE - 1) & PAGE_FRAME;
-
-	npages = sz / PAGE_SIZE;
+        DEBUG(DB_VM, "vm: as_define_region()\n");
 
 	/* We don't use these - all pages are read-write */
 	(void)readable;
 	(void)writeable;
 	(void)executable;
 
-	if (as->as_vbase1 == 0) {
-		as->as_vbase1 = vaddr;
-		as->as_npages1 = npages;
-		return 0;
-	}
+        page_table* pt = &as->as_page_table;
 
-	if (as->as_vbase2 == 0) {
-		as->as_vbase2 = vaddr;
-		as->as_npages2 = npages;
-		return 0;
-	}
+        const vpage_t vpage_min = addr_to_page(vaddr);
 
-	/*
-	 * Support for more than two regions is not available.
-	 */
-	kprintf("dumbvm: Warning: too many regions\n");
-	return ENOSYS;
+        const vpage_t vpage_count = size_to_page_count(size);
+
+        const vpage_t vpage_max = vpage_min + vpage_count;
+
+        /* Reserve virtual pages for the region */
+        for (vpage_t vpage = vpage_min; vpage < vpage_max; ++vpage) {
+
+                reserve_vpage(pt, vpage);
+        }
+
+        DEBUG(DB_VM, "vm: as_define_region() succeeds\n");
+
+        return 0;
 }
 
 static
+UNUSED
 void
 as_zero_region(paddr_t paddr, unsigned npages)
 {
@@ -489,29 +478,7 @@ as_zero_region(paddr_t paddr, unsigned npages)
 int
 as_prepare_load(struct addrspace *as)
 {
-	KASSERT(as->as_pbase1 == 0);
-	KASSERT(as->as_pbase2 == 0);
-	KASSERT(as->as_stackpbase == 0);
-
-	as->as_pbase1 = getppages(as->as_npages1);
-	if (as->as_pbase1 == 0) {
-		return ENOMEM;
-	}
-
-	as->as_pbase2 = getppages(as->as_npages2);
-	if (as->as_pbase2 == 0) {
-		return ENOMEM;
-	}
-
-	as->as_stackpbase = getppages(DUMBVM_STACKPAGES);
-	if (as->as_stackpbase == 0) {
-		return ENOMEM;
-	}
-
-	as_zero_region(as->as_pbase1, as->as_npages1);
-	as_zero_region(as->as_pbase2, as->as_npages2);
-	as_zero_region(as->as_stackpbase, DUMBVM_STACKPAGES);
-
+        (void)as;
 	return 0;
 }
 
@@ -525,49 +492,35 @@ as_complete_load(struct addrspace *as)
 int
 as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 {
-	KASSERT(as->as_stackpbase != 0);
+        DEBUG(DB_VM, "vm: as_define_stack()\n");
+
+        page_table* pt = &as->as_page_table;
+
+        const vpage_t stack_top = addr_to_page(USERSTACK);
+        const vpage_t stack_bottom = stack_top - DUMBVM_STACKPAGES;
+
+        /* Reserve virtual pages for the stack */
+        for (vpage_t vpage = stack_top; vpage > stack_bottom; --vpage) {
+
+                reserve_vpage(pt, vpage);
+        }
 
 	*stackptr = USERSTACK;
+
+        DEBUG(DB_VM, "vm: as_define_stack() succeeds\n");
 	return 0;
 }
 
 int
-as_copy(struct addrspace *old, struct addrspace **ret)
+as_copy(struct addrspace* old, struct addrspace** ret)
 {
-	struct addrspace *new;
+        *ret = as_create();
+        if (*ret == NULL) {
+                return ENOMEM;
+        }
 
-	new = as_create();
-	if (new==NULL) {
-		return ENOMEM;
-	}
+        /* TODO */
+        (void)old;
 
-	new->as_vbase1 = old->as_vbase1;
-	new->as_npages1 = old->as_npages1;
-	new->as_vbase2 = old->as_vbase2;
-	new->as_npages2 = old->as_npages2;
-
-	/* (Mis)use as_prepare_load to allocate some physical memory. */
-	if (as_prepare_load(new)) {
-		as_destroy(new);
-		return ENOMEM;
-	}
-
-	KASSERT(new->as_pbase1 != 0);
-	KASSERT(new->as_pbase2 != 0);
-	KASSERT(new->as_stackpbase != 0);
-
-	memmove((void *)PADDR_TO_KVADDR(new->as_pbase1),
-		(const void *)PADDR_TO_KVADDR(old->as_pbase1),
-		old->as_npages1*PAGE_SIZE);
-
-	memmove((void *)PADDR_TO_KVADDR(new->as_pbase2),
-		(const void *)PADDR_TO_KVADDR(old->as_pbase2),
-		old->as_npages2*PAGE_SIZE);
-
-	memmove((void *)PADDR_TO_KVADDR(new->as_stackpbase),
-		(const void *)PADDR_TO_KVADDR(old->as_stackpbase),
-		DUMBVM_STACKPAGES*PAGE_SIZE);
-
-	*ret = new;
 	return 0;
 }

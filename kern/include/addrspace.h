@@ -38,6 +38,8 @@
 #include <vm.h>
 #include "opt-dumbvm.h"
 
+#include <page_table.h>
+
 struct vnode;
 
 
@@ -58,13 +60,7 @@ struct addrspace {
         size_t as_npages2;
         paddr_t as_stackpbase;
 #else
-        vaddr_t as_vbase1;
-        paddr_t as_pbase1;
-        size_t as_npages1;
-        vaddr_t as_vbase2;
-        paddr_t as_pbase2;
-        size_t as_npages2;
-        paddr_t as_stackpbase;
+        page_table as_page_table;
         /* Put stuff here for your VM system */
 #endif
 };
