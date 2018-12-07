@@ -407,7 +407,29 @@ as_destroy(struct addrspace *as)
 void
 as_activate(void)
 {
-	/* nothing */
+        /*
+         * TLB PID Note 2
+         * Although I am setting and would like to rely on the PID field
+         * in the TLB EHI word, it does not appear to work. For this
+         * reason I am falling back on clearing the TLB after every
+         * process switch (as did DUMBVM).
+         *
+         * Documentation:
+         *
+         * Question on piazza (as to why it doesn't work):
+         *     https://piazza.com/class/jlpfhk5mesk6s0?cid=1143
+         *
+         * See TLB PID Note 1.
+         */
+
+	const int spl = splhigh();
+
+	/* Disable interrupts on this CPU while clearing the TLB. */
+	for (int i=0; i<NUM_TLB; i++) {
+		tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
+	}
+
+	splx(spl);
 }
 
 void
