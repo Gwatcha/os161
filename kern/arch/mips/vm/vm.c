@@ -346,6 +346,10 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	/* Disable interrupts on this CPU while frobbing the TLB. */
 	int spl = splhigh();
 
+        /*
+         * TODO: Consider writing TLB entries using the combined
+         * hash of the virtual page and process id
+         */
 	for (int i = 0; i < NUM_TLB; i++) {
 
                 uint32_t ehi, elo;
@@ -417,6 +421,11 @@ void
 as_deactivate(void)
 {
 	/* nothing */
+        /*
+         * TODO: Consider writing TLB entries using the combined
+         * hash of the virtual page and process id
+         */
+        /* TODO: free the used page frames! */
 }
 
 static
@@ -430,7 +439,7 @@ reserve_vpage(page_table* pt, vpage_t vpage)
 
         /*
          * Write an invalid ppage:
-         * actual pages frames are allocated when the memory is accessed
+         * actual page frames are allocated when the memory is accessed
          */
         page_table_write(pt, vpage, PPAGE_INVALID);
 }
