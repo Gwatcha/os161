@@ -178,27 +178,25 @@ vm_bootstrap(void)
 
 static
 UNUSED
-int
-find_free_pages(unsigned npages) {
+page_t
+find_free_pages(unsigned npages)
+{
+        const ppage_t imax = hardware_pages_available() - npages + 1;
+        for (ppage_t i = 0; i < imax; ++i) {
 
-        const size_t imax = hardware_pages_available() - npages + 1;
+                const ppage_t jmax = i + npages;
+                for (ppage_t j = i; j < jmax; ++j) {
 
-        for (size_t i = 0; i < imax; ++i) {
-
-                const size_t jmax = i + npages;
-
-                bool pages_are_available = true;
-                for (size_t j = i; j < jmax; ++j) {
                         if (core_map[j].cme_pid != PID_INVALID) {
-                                pages_are_available = false;
-                                break;
+                                goto try_next;
                         }
                 }
-                if (pages_are_available) {
-                        return i;
-                }
+                return i;
+
+        try_next:
+                continue;
         }
-        return -1;
+        return PPAGE_INVALID;
 }
 
 static
