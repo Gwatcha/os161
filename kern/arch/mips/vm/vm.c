@@ -448,14 +448,13 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t size,
 
         page_table* pt = &as->as_page_table;
 
+        const vaddr_t vaddr_max = vaddr + size;
+
         const vpage_t vpage_min = addr_to_page(vaddr);
-
-        const vpage_t vpage_count = size_to_page_count(size);
-
-        const vpage_t vpage_max = vpage_min + vpage_count;
+        const vpage_t vpage_max = addr_to_page(vaddr_max);
 
         /* Reserve virtual pages for the region */
-        for (vpage_t vpage = vpage_min; vpage < vpage_max; ++vpage) {
+        for (vpage_t vpage = vpage_min; vpage <= vpage_max; ++vpage) {
 
                 reserve_vpage(pt, vpage);
         }
