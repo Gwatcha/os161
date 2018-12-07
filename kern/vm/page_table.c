@@ -149,11 +149,18 @@ page_table_resize(page_table* pt, unsigned capacity)
         pt->pt_resize_pending = false;
 }
 
-float
-page_table_load_factor(const page_table* pt)
+bool
+page_table_is_overcapacity(const page_table* pt)
 {
         KASSERT(pt != NULL);
-        return pt->pt_capacity <= 0 ? 1.f : (float)pt->pt_count / pt->pt_capacity;
+        return 100 * pt->pt_count > pt->pt_capacity * PAGE_TABLE_MAX_LOAD_PERCENT;
+}
+
+bool
+page_table_is_undercapacity(const page_table* pt)
+{
+        KASSERT(pt != NULL);
+        return 100 * pt->pt_count < pt->pt_capacity * PAGE_TABLE_MIN_LOAD_PERCENT;
 }
 
 static
@@ -227,7 +234,7 @@ page_table_write(page_table* pt, const vpage_t vpage, ppage_t ppage)
         mappings[i].pm_ppage = ppage;
         pt->pt_count += 1;
 
-        if (page_table_load_factor(pt) > PAGE_TABLE_LOAD_FACTOR_MAX) {
+        if (page_table_is_overcapacity(pt)) {
                 page_table_resize(pt, pt->pt_capacity * PAGE_TABLE_GROWTH_FACTOR);
         }
 }
@@ -268,8 +275,8 @@ page_table_remove(page_table* pt, int vpage)
                 mappings[i] = mappings[j];
                 i = j;
         }
-        if (page_table_load_factor(pt) < PAGE_TABLE_LOAD_FACTOR_MIN) {
-                page_table_resize(pt, pt->pt_capacity / PAGE_TABLE_GROWTH_FACTOR);
+        if (page_table_is_undercapacity(pt)) {
+                page_table_resize(pt, capacity / PAGE_TABLE_GROWTH_FACTOR);
         }
 }
 

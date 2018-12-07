@@ -30,8 +30,9 @@
 #ifndef _PAGE_TABLE_H_
 #define _PAGE_TABLE_H_
 
-#define PAGE_TABLE_LOAD_FACTOR_MAX 0.7
-#define PAGE_TABLE_LOAD_FACTOR_MIN 0.1
+#define PAGE_TABLE_MAX_LOAD_PERCENT 70
+#define PAGE_TABLE_MIN_LOAD_PERCENT 10
+
 #define PAGE_TABLE_CAPACITY_MIN 8
 #define PAGE_TABLE_GROWTH_FACTOR 2
 
@@ -85,7 +86,9 @@ void page_table_destroy(page_table*);
 
 void page_table_resize(page_table*, const unsigned capacity);
 
-float page_table_load_factor(const page_table*);
+bool page_table_is_overcapacity(const page_table*);
+
+bool page_table_is_undercapacity(const page_table*);
 
 bool page_table_contains(const page_table* pt, vpage_t vpage);
 
