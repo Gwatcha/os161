@@ -534,7 +534,7 @@ copy_to_new_page(ppage_t old_page)
 
         DEBUG(DB_VM, "vm: copying 0x%08x -> 0x%08x\n", old_page, new_page);
 
-        memcpy((void*)old_address, (void*)new_address, PAGE_SIZE);
+        memcpy((void*)new_address, (const void*)old_address, PAGE_SIZE);
 
         return new_page;
 }
