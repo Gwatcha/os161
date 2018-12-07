@@ -172,7 +172,7 @@ vm_bootstrap(void)
 static
 UNUSED
 page_t
-find_free_pages(unsigned npages)
+find_free_coremap_entries(unsigned npages)
 {
         const ppage_t imax = hardware_pages_available() - npages + 1;
         for (ppage_t i = 0; i < imax; ++i) {
@@ -194,39 +194,39 @@ find_free_pages(unsigned npages)
 
 static
 UNUSED
-page_t
+ppage_t
 claim_free_pages(unsigned npages)
 {
 	spinlock_acquire(&stealmem_lock);
 
-        const page_t first_page_index = find_free_pages(npages);
+        const page_t first_free_index = find_free_coremap_entries(npages);
 
-        if (first_page_index == PPAGE_INVALID) {
+        if (first_free_index == PPAGE_INVALID) {
                 spinlock_release(&stealmem_lock);
                 return PPAGE_INVALID;
         }
 
-        const page_t imax = first_page_index + npages;
-        for (page_t i = first_page_index; i < imax; ++i) {
+        const page_t imax = first_free_index + npages;
+        for (page_t i = first_free_index; i < imax; ++i) {
                 core_map[i].cme_pid = PID_KERN;
         }
 
 	spinlock_release(&stealmem_lock);
 
-	return first_page_index;
+	return first_free_index + coremap_first_page;
 }
 
 static
 paddr_t
 getppages(unsigned long npages)
 {
-        const int first_page_index = claim_free_pages(npages);
+        const ppage_t ppage = claim_free_pages(npages);
 
-        if (first_page_index == PPAGE_INVALID) {
+        if (ppage == PPAGE_INVALID) {
                 kprintf("could not get a page\n");
                 return 0;
         }
-        return page_to_addr(first_page_index + coremap_first_page);
+        return page_to_addr(ppage);
 }
 
 /*
@@ -336,7 +336,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
         ppage_t ppage = page_table_read(pt, vpage);
         if (ppage == PPAGE_INVALID) {
-                ppage = claim_free_pages(1) + coremap_first_page;
+                ppage = claim_free_pages(1);
                 if (ppage == PPAGE_INVALID) {
                         kprintf("vm: Ran out of memory!\n");
                         return ENOMEM;
