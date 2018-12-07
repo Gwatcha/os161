@@ -389,7 +389,7 @@ as_create(void)
         /* My best guess for now of a good initial capacity */
         page_table_init_with_capacity(&as->as_page_table, 32);
 
-        DEBUG(DB_VM, "vm: as_create() succeeds\n");
+        DEBUG(DB_VM, "vm: as_create() done\n");
 
 	return as;
 }
@@ -460,7 +460,7 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t size,
                 reserve_vpage(pt, vpage);
         }
 
-        DEBUG(DB_VM, "vm: as_define_region() succeeds\n");
+        DEBUG(DB_VM, "vm: as_define_region() done\n");
 
         return 0;
 }
@@ -505,7 +505,7 @@ as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 
 	*stackptr = USERSTACK;
 
-        DEBUG(DB_VM, "vm: as_define_stack() succeeds\n");
+        DEBUG(DB_VM, "vm: as_define_stack() done\n");
 	return 0;
 }
 
