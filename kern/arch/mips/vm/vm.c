@@ -557,9 +557,11 @@ copy_to_new_page(ppage_t old_page)
         const vaddr_t old_address = PADDR_TO_KVADDR(page_to_addr(old_page));
         const vaddr_t new_address = PADDR_TO_KVADDR(page_to_addr(new_page));
 
-        DEBUG(DB_VM, "vm: copying 0x%08x -> 0x%08x\n", old_page, new_page);
+        DEBUG(DB_VM, "vm: copy page 0x%x -> 0x%x\n", old_page, new_page);
 
         memcpy((void*)new_address, (const void*)old_address, PAGE_SIZE);
+
+        DEBUG(DB_VM, "vm: done copy page\n");
 
         return new_page;
 }
