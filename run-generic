@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+cd kern/compile/GENERIC &&
+bmake depend -s &&
+bmake -s &&
+bmake install -s &&
+
+cd ../../../../root &&
+sys161 kernel &&
+
+cd ../src
+
