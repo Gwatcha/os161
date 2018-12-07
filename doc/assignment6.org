@@ -18,18 +18,42 @@ The core map is an array with an entry for each page of physical memory that is 
 
 The page table is a hashmap virtual to physical page indices
 
-** DONE Use page table for user process virtual memory
+** TODO Manage kernel process memory with page table
+
+** DONE Manage user process memory with page table
 
 ** TODO Free pages when user processes exit
 
 ** TODO Come up with a better TLB scheme
-
-** TODO Use page table for kernel virtual memory
 
 ** TODO Use swap file
 
 * Bugs
 
 * Tests
+
+~Run all tests with 512 KB of RAM and 5 MB swap.~
+
+** DONE km1 (10 pts)
+
+** DONE km2 (10 pts)
+
+** km3 (10 pts)
+km3 takes a numeric parameter.
+km3 status by testing different powers of two:
+- Passing km3 2048
+- Failing km3 4096
+
+I believe that completing [[Manage kernel process memory with page table]] will allow us to pass km3 with very large inputs.
+
+** TODO forktest (7.5 pts)
+
+** TODO multiexec (7.5 pts)
+
+** TODO sbrktest (3.5 pts)
+Skip tests 9-11
+
+** TODO malloctest (3.5 pts)
+Skip tests 9-11
 
 
