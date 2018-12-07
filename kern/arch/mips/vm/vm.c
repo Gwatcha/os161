@@ -324,11 +324,12 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		return EFAULT;
 	}
 
-        const page_table* pt = &as->as_page_table;
+        page_table* pt = &as->as_page_table;
 
         const vpage_t vpage = addr_to_page(faultaddress);
 
         if (!page_table_contains(pt, vpage)) {
+                kprintf("vm: hard fault! 0x%x\n", faultaddress);
                 return EFAULT;
         }
 
@@ -338,6 +339,9 @@ vm_fault(int faulttype, vaddr_t faultaddress)
                 if (ppage == PPAGE_INVALID) {
                         kprintf("vm: Ran out of memory!\n");
                         return ENOMEM;
+                }
+                else {
+                        page_table_write(pt, vpage, ppage);
                 }
         }
 
