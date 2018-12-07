@@ -401,6 +401,7 @@ as_create(void)
 void
 as_destroy(struct addrspace *as)
 {
+        /* TODO: free the used page frames! */
 	kfree(as);
 }
 
@@ -436,11 +437,6 @@ void
 as_deactivate(void)
 {
 	/* nothing */
-        /*
-         * TODO: Consider writing TLB entries using the combined
-         * hash of the virtual page and process id
-         */
-        /* TODO: free the used page frames! */
 }
 
 static
