@@ -330,7 +330,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
         const vpage_t vpage = addr_to_page(faultaddress);
 
         if (!page_table_contains(pt, vpage)) {
-                kprintf("vm: hard fault! 0x%x\n", faultaddress);
+                kprintf("vm: hard fault! pid %d, vaddr 0x%x\n", pid, faultaddress);
                 return EFAULT;
         }
 
@@ -368,7 +368,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
                  */
 		ehi = faultaddress | (pid << 6);
 		elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
-		DEBUG(DB_VM, "vm: 0x%x -> 0x%x\n", faultaddress, paddr);
+		DEBUG(DB_VM, "vm: pid %d 0x%x -> 0x%x\n", pid, faultaddress, paddr);
 		tlb_write(ehi, elo, i);
 		splx(spl);
 		return 0;
