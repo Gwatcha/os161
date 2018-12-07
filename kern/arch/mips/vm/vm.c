@@ -509,16 +509,66 @@ as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 	return 0;
 }
 
+static
+ppage_t
+copy_to_new_page(ppage_t old_page)
+{
+        if (old_page == PPAGE_INVALID) {
+                return PPAGE_INVALID;
+        }
+
+        const ppage_t new_page = claim_free_pages(1);
+        if (new_page == PPAGE_INVALID) {
+                return PPAGE_INVALID;
+        }
+
+        const vaddr_t old_address = PADDR_TO_KVADDR(page_to_addr(old_page));
+        const vaddr_t new_address = PADDR_TO_KVADDR(page_to_addr(new_page));
+
+        DEBUG(DB_VM, "vm: copying 0x%08x -> 0x%08x\n", old_page, new_page);
+
+        memcpy((void*)old_address, (void*)new_address, PAGE_SIZE);
+
+        return new_page;
+}
+
 int
 as_copy(struct addrspace* old, struct addrspace** ret)
 {
+        DEBUG(DB_VM, "vm: as_copy()\n");
+
         *ret = as_create();
         if (*ret == NULL) {
                 return ENOMEM;
         }
+        page_table* new_pt = &(*ret)->as_page_table;
 
-        /* TODO */
-        (void)old;
+        const page_table* old_pt = &old->as_page_table;
+        const page_mapping* old_mappings = old_pt->pt_mappings;
+        const unsigned old_capacity = old_pt->pt_capacity;
+
+        for (unsigned i = 0; i < old_capacity; ++i) {
+
+                const page_mapping* old_mapping = old_mappings + i;
+
+                if (!page_mapping_is_valid(old_mapping)) {
+                        continue;
+                }
+
+                const vpage_t old_vpage = old_mapping->pm_vpage;
+                const ppage_t old_ppage = old_mapping->pm_ppage;
+
+                const ppage_t new_ppage = copy_to_new_page(old_ppage);
+
+                /*
+                 * TODO: if the old page is valid and the new page is invalid
+                 * then we have run out of pages
+                 */
+
+                page_table_write(new_pt, old_vpage, new_ppage);
+        }
+
+        DEBUG(DB_VM, "vm: as_copy() done\n");
 
 	return 0;
 }
