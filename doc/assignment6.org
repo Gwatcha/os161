@@ -28,6 +28,15 @@ The page table is a hashmap virtual to physical page indices
 
 ** TODO Use swap file
 
+** TODO Share readonly program memory between processes
+
+* Other improvements
+
+** Move coremap to its own .h/.c file
+This will help to provide better encapsulation
+- Conversion between coremap indices and physical page numbers is error prone
+- Encapsulation may help with this
+
 * Bugs
 
 * Tests
