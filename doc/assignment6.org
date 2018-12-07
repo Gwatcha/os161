@@ -1,0 +1,35 @@
+#+title: Assignment 6 - Virtual Memory
+
+Relevant files include:
+- [[../kern/include/page_table.h]]
+- [[../kern/vm/page_table.c]]
+- [[../kern/include/addrspace.h]]
+- [[../kern/include/vm.h]]
+- [[../kern/arch/mips/vm/vm.c]]
+
+* Features
+
+** DONE Core map
+
+The core map is an array with an entry for each page of physical memory that is managed by the vm system
+- Not all physical memory is available to the vm system
+
+** DONE Page table data structure
+
+The page table is a hashmap virtual to physical page indices
+
+** DONE Use page table for user process virtual memory
+
+** TODO Free pages when user processes exit
+
+** TODO Come up with a better TLB scheme
+
+** TODO Use page table for kernel virtual memory
+
+** TODO Use swap file
+
+* Bugs
+
+* Tests
+
+
