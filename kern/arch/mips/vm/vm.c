@@ -363,7 +363,10 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		if (elo & TLBLO_VALID) {
 			continue;
 		}
-		ehi = faultaddress | pid;
+                /*
+                 * TLB PID Note 1, see TLB PID Note 2
+                 */
+		ehi = faultaddress | (pid << 6);
 		elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
 		DEBUG(DB_VM, "vm: 0x%x -> 0x%x\n", faultaddress, paddr);
 		tlb_write(ehi, elo, i);
