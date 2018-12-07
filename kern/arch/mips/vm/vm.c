@@ -439,7 +439,14 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t size,
 {
         KASSERT(as != NULL);
 
-        DEBUG(DB_VM, "vm: as_define_region()\n");
+        DEBUG(DB_VM,
+              "vm: as_define_region(vaddr:      0x%08x\n"
+              "                     size:       0x%08x\n"
+              "                     readable:   %d\n"
+              "                     writeable:  %d\n"
+              "                     executable: %d\n"
+              ")\n",
+              vaddr, size, readable, writeable, executable);
 
 	/* We don't use these - all pages are read-write */
 	(void)readable;
