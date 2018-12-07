@@ -123,7 +123,7 @@ page_table_resize(page_table* pt, unsigned capacity)
 
         page_mapping* old_mappings = pt->pt_mappings;
         const unsigned old_capacity = pt->pt_capacity;
-        const unsigned old_count = pt->pt_capacity;
+        const unsigned old_count = pt->pt_count;
         const unsigned old_mappings_owned = pt->pt_owns_mappings;
 
         pt->pt_mappings = page_mappings_create(capacity);
@@ -144,7 +144,8 @@ page_table_resize(page_table* pt, unsigned capacity)
         }
 
         /* If our implementation works this will be true */
-        KASSERT(pt->pt_count == old_count);
+        KASSERTM(pt->pt_count == old_count,
+                 "\n    old_count: %d, new_count: %d\n", old_count, pt->pt_count);
 
         pt->pt_resize_pending = false;
 }
