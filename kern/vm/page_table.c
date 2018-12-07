@@ -15,23 +15,14 @@ hash(unsigned x)
         return x;
 }
 
-static
 void
-page_mapping_set_empty(page_mapping* pm)
+page_mapping_invalidate(page_mapping* pm)
 {
         pm->pm_vpage = VPAGE_INVALID;
 }
 
-static
 bool
-page_mapping_is_empty(const page_mapping* pm)
-{
-        return pm->pm_vpage == VPAGE_INVALID;
-}
-
-static
-bool
-page_mapping_is_occupied(const page_mapping* pm)
+page_mapping_is_valid(const page_mapping* pm)
 {
         return pm->pm_vpage != VPAGE_INVALID;
 }
@@ -58,7 +49,7 @@ page_mappings_create(unsigned capacity)
         }
 
         for (unsigned i = 0; i < capacity; ++i) {
-                page_mapping_set_empty(mappings + i);
+                page_mapping_invalidate(mappings + i);
         }
         return mappings;
 }
@@ -142,7 +133,7 @@ page_table_resize(page_table* pt, unsigned capacity)
 
         for (unsigned i = 0; i < old_capacity; ++i) {
                 const page_mapping* mapping = old_mappings + i;
-                if (page_mapping_is_empty(mapping)) {
+                if (!page_mapping_is_valid(mapping)) {
                         continue;
                 }
                 page_table_write(pt, mapping->pm_vpage, mapping->pm_ppage);
@@ -176,7 +167,7 @@ page_table_find_slot(const page_table* pt, vpage_t vpage)
 
         unsigned i = hash(vpage) % capacity;
 
-        while (page_mapping_is_occupied(mappings + i) && mappings[i].pm_vpage != vpage) {
+        while (page_mapping_is_valid(mappings + i) && mappings[i].pm_vpage != vpage) {
                 i = (i + 1) % capacity;
         }
         return i;
@@ -191,7 +182,7 @@ page_table_contains(const page_table* pt, vpage_t vpage)
 
         const int i = page_table_find_slot(pt, vpage);
 
-        if (page_mapping_is_occupied(mappings + i)) {
+        if (page_mapping_is_valid(mappings + i)) {
                 /* Key found */
                 return true;
         }
@@ -208,7 +199,7 @@ page_table_read(const page_table* pt, vpage_t vpage)
 
         const int i = page_table_find_slot(pt, vpage);
 
-        if (page_mapping_is_occupied(mappings + i)) {
+        if (page_mapping_is_valid(mappings + i)) {
                 /* Key found */
                 return mappings[i].pm_ppage;
         }
@@ -225,7 +216,7 @@ page_table_write(page_table* pt, const vpage_t vpage, ppage_t ppage)
 
         const int i = page_table_find_slot(pt, vpage);
 
-        if (page_mapping_is_occupied(mappings + i)) {
+        if (page_mapping_is_valid(mappings + i)) {
                 /* Overwrite the old mapping */
                 mappings[i].pm_ppage = ppage;
                 return;
@@ -251,7 +242,7 @@ page_table_remove(page_table* pt, int vpage)
 
         int i = page_table_find_slot(pt, vpage);
 
-        if (page_mapping_is_empty(mappings + i)) {
+        if (!page_mapping_is_valid(mappings + i)) {
                 /* Key is not in table */
                 return;
         }
@@ -261,11 +252,11 @@ page_table_remove(page_table* pt, int vpage)
         int j = i;
 
         while (true) {
-                page_mapping_set_empty(mappings + i);
+                page_mapping_invalidate(mappings + i);
         r2:
                 j = (j + 1) % capacity;
 
-                if (page_mapping_is_empty(mappings + j)) {
+                if (!page_mapping_is_valid(mappings + j)) {
                         break;
                 }
 

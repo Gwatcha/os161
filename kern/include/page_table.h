@@ -49,6 +49,9 @@ typedef struct page_mapping {
         ppage_t pm_ppage; /* The physical page number */
 } page_mapping;
 
+void page_mapping_invalidate(page_mapping* pm);
+bool page_mapping_is_valid(const page_mapping* pm);
+
 typedef struct {
         page_mapping* pt_mappings;
         unsigned pt_capacity;
