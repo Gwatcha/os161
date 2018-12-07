@@ -223,6 +223,7 @@ getppages(unsigned long npages)
         const int first_page_index = claim_free_pages(npages);
 
         if (first_page_index == PPAGE_INVALID) {
+                kprintf("could not get a page\n");
                 return 0;
         }
         return page_to_addr(first_page_index + coremap_first_page);
@@ -424,7 +425,7 @@ reserve_vpage(page_table* pt, vpage_t vpage)
         KASSERTM(!page_table_contains(pt, vpage),
                  "Page table already contains an entry for %x", vpage);
 
-        DEBUG(DB_VM, "vm: reserve vpage %x\n", vpage);
+        DEBUG(DB_VM, "vm: reserve vpage 0x%x\n", vpage);
 
         /*
          * Write an invalid ppage:
@@ -448,7 +449,7 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t size,
               ")\n",
               vaddr, size, readable, writeable, executable);
 
-	/* We don't use these - all pages are read-write */
+	/* Not using these yet - all pages are read-write */
 	(void)readable;
 	(void)writeable;
 	(void)executable;
