@@ -339,6 +339,7 @@ file      proc/proc_table.c
 #
 
 file                vm/kmalloc.c
+optfile generic     vm/page_file.c
 optfile generic     vm/page_table.c
 
 # optofffile dumbvm   vm/addrspace.c
