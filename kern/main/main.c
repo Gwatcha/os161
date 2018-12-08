@@ -39,6 +39,7 @@
 #include <spl.h>
 #include <clock.h>
 #include <thread.h>
+#include <page_file.h>
 #include <proc.h>
 #include <current.h>
 #include <synch.h>
@@ -133,6 +134,7 @@ boot(void)
 
 	kheap_nextgeneration();
 
+        page_file_bootstrap();
 	/*
 	 * Make sure various things aren't screwed up.
 	 */
