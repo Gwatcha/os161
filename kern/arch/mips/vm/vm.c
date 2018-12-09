@@ -374,7 +374,12 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		return 0;
 	}
 
-	kprintf("vm: Ran out of TLB entries - cannot handle page fault\n");
+        /*
+         * WARNING, May not want to use krpintf in here after a tlb write, as
+         * it may touch some of the TLB entries and make some weird bugs
+         */
+
+	// kprintf("vm: Ran out of TLB entries - cannot handle page fault\n");
 	splx(spl);
 	return EFAULT;
 }
