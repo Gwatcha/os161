@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009
- *	The President and Fellows of Harvard College.
+ *  The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,8 @@
 
 
 #include <cdefs.h> /* for __DEAD */
+#include <types.h>
+
 struct trapframe; /* from <machine/trapframe.h> */
 
 /*
@@ -49,7 +51,7 @@ void enter_forked_process(struct trapframe *tf);
 
 /* Enter user mode. Does not return. */
 __DEAD void enter_new_process(int argc, userptr_t argv, userptr_t env,
-		       vaddr_t stackptr, vaddr_t entrypoint);
+        vaddr_t stackptr, vaddr_t entrypoint);
 
 
 /*
@@ -98,5 +100,11 @@ int sys_getpid(pid_t* retval);
 int sys_waitpid(pid_t* retval, pid_t pid, int *status, int options);
 
 __DEAD void sys__exit(int exitcode);
+
+/*
+ * VM
+ */
+int sys_sbrk(void* retval, intptr_t amount);
+
 
 #endif /* _SYSCALL_H_ */
