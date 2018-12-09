@@ -79,3 +79,19 @@ Skip tests 9-11
 Skip tests 9-11
 
 
+** TODO huge (1 pt)
+
+** TODO palin (1 pt)
+
+** TODO matmult (1 pt)
+
+** TODO triplemat (1 pt)
+
+** TODO quintmat (1 pt)
+
+** TODO sort (1 pt)
+
+** TODO triplesort (1 pt)
+
+** TODO quintsort (1 pt)
+
