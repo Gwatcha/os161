@@ -42,20 +42,21 @@ typedef int pfid;
 void page_file_bootstrap(void);
 
 /*
- * Returns the index at which the page can be retrieved in future
- * Returns PF_INVALID if it is not possible to suspend a page
+ * Writes PAGE_SIZE bytes to disk (if possible).
+ * Returns the index at which the page can be retrieved in future.
+ * Returns PF_INVALID if it is not possible to write a page to disk.
  */
-pfid page_file_write(int index, const void* src);
+pfid page_file_write(const void* src);
 
 /*
- * Returns the index at which the page can be retrieved
- * Returns PF_INVALID if it is not possible to suspend a page
+ * Reads PAGE_SIZE bytes from page pfid on disk.
+ * Returns an error code if the data cannot be read.
+ * Free's the page pfid for future use.
  */
-void page_file_retrieve(pfid index, void* data);
+int page_file_read_and_free(pfid index, void* data);
 
 /*
- * Returns the index at which the page can be retrieved
- * Returns PF_INVALID if it is not possible to suspend a page
+ * Free's the page pfid for future use.
  */
 void page_file_free(pfid index);
 
