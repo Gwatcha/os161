@@ -50,6 +50,8 @@ This will help to provide better encapsulation
 - Conversion between coremap indices and physical page numbers is error prone
 - Encapsulation may help with this
 
+** TODO Extend stack dynamically rather than allocating virtual pages up front
+
 * Bugs
 
 * Tests
