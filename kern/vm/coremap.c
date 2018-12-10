@@ -122,7 +122,6 @@ free_kpages(vaddr_t vaddr)
         spinlock_release(&stealmem_lock);
 }
 
-UNUSED
 page_t
 find_free_coremap_entries(unsigned npages)
 {
@@ -144,7 +143,6 @@ find_free_coremap_entries(unsigned npages)
         return PPAGE_INVALID;
 }
 
-UNUSED
 ppage_t
 claim_free_pages(unsigned npages)
 {
