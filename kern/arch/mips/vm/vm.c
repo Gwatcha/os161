@@ -539,16 +539,24 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t size,
 
         page_table* pt = &as->as_page_table;
 
-        const vaddr_t vaddr_max = vaddr + size;
+        const vaddr_t vaddr_max = vaddr + size - 1;
 
         const vpage_t vpage_min = addr_to_page(vaddr);
         const vpage_t vpage_max = addr_to_page(vaddr_max);
 
         /* Reserve virtual pages for the region */
         for (vpage_t vpage = vpage_min; vpage <= vpage_max; ++vpage) {
-
                 reserve_vpage(pt, vpage);
         }
+
+        /* check if this region extends past our current heap start, if so, move */
+        /* the heap start further up, we can do this because regions are */
+        /* never defined when the heap is in use */
+        while ( vaddr_max >= as->as_heap_start  ) {
+                as->as_heap_start += PAGE_SIZE;
+                as->as_heap_end = as->as_heap_start;
+        }
+
 
         DEBUG(DB_VM, "vm: as_define_region() done\n");
 
@@ -567,6 +575,12 @@ as_create(void)
 
         /* My best guess for now of a good initial capacity */
         page_table_init_with_capacity(&as->as_page_table, 32);
+
+        /* the heap starts at 0, and if any region is defined (excluding the */
+        /* stack) the heap start is moved to the next free page */
+        /* after that region */
+        as->as_heap_start = 0;
+        as->as_heap_end = as->as_heap_start;
 
         DEBUG(DB_VM, "vm: as_create() done\n");
 
