@@ -38,6 +38,11 @@
 #define PAGE_SIZE  4096         /* size of VM page */
 #define PAGE_FRAME 0xfffff000   /* mask for getting page number from addr */
 
+/* FIXME under our VM, we always have 72k of user stack */
+/* (this must be > 64K so argument blocks of size ARG_MAX will fit) */
+#define STACKPAGES    18
+#define PAGE_SIZE_LOG_2 12
+
 /*
  * MIPS-I hardwired memory layout:
  *    0xc0000000 - 0xffffffff   kseg2 (kernel, tlb-mapped)
