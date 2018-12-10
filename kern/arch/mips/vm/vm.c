@@ -88,28 +88,25 @@ hardware_pages_available()
 }
 
 static
+UNUSED
 paddr_t
 physical_memory_available()
 {
         return hardware_pages_available() * PAGE_SIZE;
 }
 
-
-static
 page_t
 addr_to_page(unsigned addr)
 {
         return addr >> PAGE_SIZE_LOG_2;
 }
 
-static
 unsigned
 page_to_addr(page_t page)
 {
         return page << PAGE_SIZE_LOG_2;
 }
 
-static
 page_t
 size_to_page_count(size_t size)
 {
