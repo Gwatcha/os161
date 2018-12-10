@@ -41,10 +41,6 @@
 
 #include <types.h>
 
-typedef int page_t;
-typedef page_t ppage_t;
-typedef page_t vpage_t;
-
 typedef struct page_mapping {
         vpage_t pm_vpage; /* The virtual page number */
         ppage_t pm_ppage; /* The physical page number */

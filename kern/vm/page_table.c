@@ -213,6 +213,7 @@ page_table_read(const page_table* pt, vpage_t vpage)
         }
         /* Key not found */
         return PPAGE_INVALID;
+        // TODO should possibly be VPAGE_INVALID?
 }
 
 void

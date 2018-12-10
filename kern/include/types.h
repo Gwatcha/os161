@@ -134,6 +134,14 @@ typedef __nfds_t nfds_t;
 typedef __socklen_t socklen_t;
 
 /*
+ * VM
+ */
+
+typedef int page_t; 
+typedef page_t ppage_t; /* physical page */
+typedef page_t vpage_t; /* virtual page */
+
+/*
  * Number of bits per byte.
  */
 
