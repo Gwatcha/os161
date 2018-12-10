@@ -591,6 +591,7 @@ void
 as_destroy(struct addrspace *as)
 {
         /* TODO: free the used page frames! */
+        page_table_cleanup(&as->as_page_table);
 	kfree(as);
 }
 
