@@ -158,8 +158,6 @@ vm_bootstrap(void)
         for (ppage_t i = coremap_pages_required; i < num_hardware_pages; ++i) {
                 core_map[i].cme_pid = PID_INVALID;
         }
-
-        /* TODO Initialize page table */
 }
 
 static
@@ -230,10 +228,6 @@ getppages(unsigned long npages)
 vaddr_t
 alloc_kpages(unsigned npages)
 {
-        /* TODO Find n free pages in the coremap structure */
-        /* TODO set them to be used my kernel */
-        /* TODO update TLB? or just wait for the fault?  */
-
         const paddr_t pa = getppages(npages);
 
 	return PADDR_TO_KVADDR(pa);

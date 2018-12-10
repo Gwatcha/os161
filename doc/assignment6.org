@@ -22,7 +22,7 @@ The page table is a hashmap virtual to physical page indices
 
 ** DONE Manage user process memory with page table
 
-** TODO Implement sbrk
+** DONE Implement sbrk
 Estimate: 4 hours
 Assignee: Michael
 
@@ -96,4 +96,3 @@ Skip tests 9-11
 ** TODO triplesort (1 pt)
 
 ** TODO quintsort (1 pt)
-
