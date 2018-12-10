@@ -342,8 +342,7 @@ file                vm/kmalloc.c
 optfile generic     vm/page_file.c
 optfile generic     vm/page_table.c
 optfile generic     vm/coremap.c
-
-# optofffile dumbvm   vm/addrspace.c
+optfile generic     vm/addrspace.c
 
 #
 # Network
