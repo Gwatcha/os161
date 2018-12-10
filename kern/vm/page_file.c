@@ -65,21 +65,21 @@ pfid page_file_write(const void* src) {
         for (i = 0; i < swapmap_size; i++) {
                 if ( swapmap[i] == 0 ) {
                         swapmap[i] = 1;
-                        break;
+                        /* new uio for swap write transfer */
+                        struct iovec iov;
+                        struct uio swp_uio;
+                        uio_kinit(&iov, &swp_uio, (void*) src, PAGE_SIZE, i*PAGE_SIZE, UIO_WRITE);
+
+                        int result = VOP_WRITE(swapfile, &swp_uio);
+                        if (result) {
+                                return result;
+                        }
+
+                        return i;
                 }
-        }
+            }
 
-        /* new uio for swap write transfer */
-        struct iovec iov;
-        struct uio swp_uio;
-        uio_kinit(&iov, &swp_uio, (void*) src, PAGE_SIZE, i*PAGE_SIZE, UIO_WRITE);
-
-        int result = VOP_WRITE(swapfile, &swp_uio);
-        if (result) {
-                return result;
-        }
-
-        return i;
+        return PF_INVALID;
 }
 
 /*
@@ -90,7 +90,7 @@ pfid page_file_write(const void* src) {
 int page_file_read_and_free(pfid index, void* data) {
 
         if ( index < 0 || index >= swapmap_size || swapmap[index] != 1 ) {
-                return  EINVAL;
+                return PF_INVALID;
         }
 
         /* new uio for swap read transfer */
@@ -113,6 +113,8 @@ int page_file_read_and_free(pfid index, void* data) {
  * Free's the page pfid for future use.
  */
 void page_file_free(pfid index) {
-       KASSERT( !(index < 0 || index >= swapmap_size || swapmap[index] != 1 ));
+       KASSERT( !(index < 0 ));
+       KASSERT( !(index >= swapmap_size));
+       KASSERT( !(swapmap[index] != 1 ));
        swapmap[index] = 0;
 }
