@@ -42,6 +42,11 @@
 
 // ~~~~~ Static Functions ~~~~~~~
 
+/*
+ * Writes vpage:PPAGE_INVALID, entry into page table. If an entry for vpage
+ * exists, it overwrites it, else, it is made.
+ * Called by as_define_stack and as_define_region.
+ */
 static
 void
 reserve_vpage(page_table* pt, vpage_t vpage)
@@ -57,6 +62,7 @@ reserve_vpage(page_table* pt, vpage_t vpage)
          */
         page_table_write(pt, vpage, PPAGE_INVALID);
 }
+
 
 static
 ppage_t
