@@ -27,13 +27,13 @@
  * SUCH DAMAGE.
  */
 
-#include <types.h>
-#include <kern/errno.h>
-#include <current.h>
-#include <lib.h>
-#include <proc.h>
-#include <addrspace.h>
-#include <vm.h>
+// #include <types.h>
+// #include <kern/errno.h>
+// #include <current.h>
+// #include <lib.h>
+// #include <proc.h>
+// #include <addrspace.h>
+// #include <vm.h>
 
 /*
  * Note! If OPT_DUMBVM is set, as is the case until you start the VM
@@ -41,81 +41,107 @@
  * used. The cheesy hack versions in dumbvm.c are used instead.
  */
 
-struct addrspace *
-as_create(void)
-{
-	struct addrspace *as;
 
-	as = kmalloc(sizeof(struct addrspace));
-	if (as == NULL) {
-		return NULL;
-	}
+// static
+// UNUSED
+// void
+// as_zero_region(paddr_t paddr, unsigned npages)
+// {
+//         bzero((void *)PADDR_TO_KVADDR(paddr), npages * PAGE_SIZE);
+// }
+
+// int
+// as_prepare_load(struct addrspace *as)
+// {
+//         (void)as;
+//         return 0;
+// }
+
+// int
+// as_complete_load(struct addrspace *as)
+// {
+//         (void)as;
+//         return 0;
+// }
+
+// int
+// as_define_stack(struct addrspace *as, vaddr_t *stackptr)
+// {
+//         DEBUG(DB_VM, "vm: as_define_stack()\n");
+
+//         page_table* pt = &as->as_page_table;
+
+//         const vpage_t stack_top = addr_to_page(USERSTACK);
+//         const vpage_t stack_bottom = stack_top - DUMBVM_STACKPAGES;
+
+//         // /* Reserve virtual pages for the stack */
+//         for (vpage_t vpage = stack_top; vpage > stack_bottom; --vpage) {
+
+//                 reserve_vpage(pt, vpage);
+//         }
+
+//         *stackptr = USERSTACK;
+
+//         DEBUG(DB_VM, "vm: as_define_stack() done\n");
+//         return 0;
+// }
+// struct addrspace *
+// as_create(void)
+// {
+//         struct addrspace *as;
+
+//         as = kmalloc(sizeof(struct addrspace));
+//         if (as == NULL) {
+//                 return NULL;
+//         }
 
 	/*
 	 * Initialize as needed.
 	 */
 
-	return as;
-}
+//         return as;
+// }
 
-int
-as_copy(struct addrspace *old, struct addrspace **ret)
-{
-	struct addrspace *newas;
+// int
+// as_copy(struct addrspace* old, struct addrspace** ret)
+// {
+//         DEBUG(DB_VM, "vm: as_copy()\n");
 
-	newas = as_create();
-	if (newas==NULL) {
-		return ENOMEM;
-	}
+//         *ret = as_create();
+//         if (*ret == NULL) {
+//                 return ENOMEM;
+//         }
+//         page_table* new_pt = &(*ret)->as_page_table;
 
-	/*
-	 * Write this.
-	 */
+//         const page_table* old_pt = &old->as_page_table;
+//         const page_mapping* old_mappings = old_pt->pt_mappings;
+//         const unsigned old_capacity = old_pt->pt_capacity;
 
-	(void)old;
+//         for (unsigned i = 0; i < old_capacity; ++i) {
 
-	*ret = newas;
-	return 0;
-}
+//                 const page_mapping* old_mapping = old_mappings + i;
 
-void
-as_destroy(struct addrspace *as)
-{
-	/*
-	 * Clean up as needed.
-	 */
+//                 if (!page_mapping_is_valid(old_mapping)) {
+//                         continue;
+//                 }
 
-	kfree(as);
-}
+//                 const vpage_t old_vpage = old_mapping->pm_vpage;
+//                 const ppage_t old_ppage = old_mapping->pm_ppage;
 
-void
-as_activate(void)
-{
-	struct addrspace *as;
+//                 const ppage_t new_ppage = copy_to_new_page(old_ppage);
 
-	as = proc_getas();
-	if (as == NULL) {
-		/*
-		 * Kernel thread without an address space; leave the
-		 * prior address space in place.
-		 */
-		return;
-	}
+                /*
+                 * TODO: if the old page is valid and the new page is invalid
+                 * then we have run out of pages
+                 */
 
-	/*
-	 * Write this.
-	 */
-}
+//                 page_table_write(new_pt, old_vpage, new_ppage);
+//         }
 
-void
-as_deactivate(void)
-{
-	/*
-	 * Write this. For many designs it won't need to actually do
-	 * anything. See proc.c for an explanation of why it (might)
-	 * be needed.
-	 */
-}
+//         DEBUG(DB_VM, "vm: as_copy() done\n");
+
+//         return 0;
+// }
 
 /*
  * Set up a segment at virtual address VADDR of size MEMSIZE. The
@@ -127,57 +153,100 @@ as_deactivate(void)
  * moment, these are ignored. When you write the VM system, you may
  * want to implement them.
  */
-int
-as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
-		 int readable, int writeable, int executable)
-{
-	/*
-	 * Write this.
-	 */
+// int
+// as_define_region(struct addrspace *as, vaddr_t vaddr, size_t size,
+//                  int readable, int writeable, int executable)
+// {
+//         KASSERT(as != NULL);
 
-	(void)as;
-	(void)vaddr;
-	(void)sz;
-	(void)readable;
-	(void)writeable;
-	(void)executable;
-	return ENOSYS;
-}
+//         DEBUG(DB_VM,
+//               "vm: as_define_region(vaddr:      0x%08x\n"
+//               "                     size:       0x%08x\n"
+//               "                     readable:   %d\n"
+//               "                     writeable:  %d\n"
+//               "                     executable: %d\n"
+//               ")\n",
+//               vaddr, size, readable, writeable, executable);
 
-int
-as_prepare_load(struct addrspace *as)
-{
-	/*
-	 * Write this.
-	 */
+//         // /* Not using these yet - all pages are read-write */
+//         (void)readable;
+//         (void)writeable;
+//         (void)executable;
 
-	(void)as;
-	return 0;
-}
+//         page_table* pt = &as->as_page_table;
 
-int
-as_complete_load(struct addrspace *as)
-{
-	/*
-	 * Write this.
-	 */
+//         const vaddr_t vaddr_max = vaddr + size;
 
-	(void)as;
-	return 0;
-}
+//         const vpage_t vpage_min = addr_to_page(vaddr);
+//         const vpage_t vpage_max = addr_to_page(vaddr_max);
 
-int
-as_define_stack(struct addrspace *as, vaddr_t *stackptr)
-{
-	/*
-	 * Write this.
-	 */
+//         // /* Reserve virtual pages for the region */
+//         for (vpage_t vpage = vpage_min; vpage <= vpage_max; ++vpage) {
 
-	(void)as;
+//                 reserve_vpage(pt, vpage);
+//         }
 
-	/* Initial user-level stack pointer */
-	*stackptr = USERSTACK;
+//         DEBUG(DB_VM, "vm: as_define_region() done\n");
 
-	return 0;
-}
+//         return 0;
+// }
+// struct addrspace *
+// as_create(void)
+// {
+//         DEBUG(DB_VM, "vm: as_create()\n");
+
+//         struct addrspace *as = kmalloc(sizeof(struct addrspace));
+//         if (as==NULL) {
+//                 return NULL;
+//         }
+
+
+//         // /* My best guess for now of a good initial capacity */
+//         page_table_init_with_capacity(&as->as_page_table, 32);
+
+//         DEBUG(DB_VM, "vm: as_create() done\n");
+
+//         return as;
+// }
+
+// void
+// as_destroy(struct addrspace *as)
+// {
+//         // /* TODO: free the used page frames! */
+//         kfree(as);
+// }
+
+// void
+// as_activate(void)
+// {
+        /*
+         * TLB PID Note 2
+         * Although I am setting and would like to rely on the PID field
+         * in the TLB EHI word, it does not appear to work. For this
+         * reason I am falling back on clearing the TLB after every
+         * process switch (as did DUMBVM).
+         *
+         * Documentation:
+         *
+         * Question on piazza (as to why it doesn't work):
+         *     https://piazza.com/class/jlpfhk5mesk6s0?cid=1143
+         *
+         * See TLB PID Note 1.
+         */
+
+//         const int spl = splhigh();
+
+//         // /* Disable interrupts on this CPU while clearing the TLB. */
+//         for (int i=0; i<NUM_TLB; i++) {
+//                 tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
+//         }
+
+//         splx(spl);
+// }
+
+// void
+// as_deactivate(void)
+// {
+//         // /* nothing */
+// }
 

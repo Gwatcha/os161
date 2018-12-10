@@ -36,8 +36,8 @@
  * You'll probably want to add stuff here.
  */
 
-
 #include <machine/vm.h>
+#include <types.h>
 
 /* Fault-type arguments to vm_fault() */
 #define VM_FAULT_READ        0    /* A read was attempted */
@@ -58,6 +58,15 @@ void free_kpages(vaddr_t addr);
 /* TLB shootdown handling called from interprocessor_interrupt */
 void vm_tlbshootdown_all(void);
 void vm_tlbshootdown(const struct tlbshootdown *);
+
+page_t
+addr_to_page(unsigned addr);
+
+unsigned
+page_to_addr(page_t page);
+
+page_t
+size_to_page_count(size_t size);
 
 
 #endif /* _VM_H_ */

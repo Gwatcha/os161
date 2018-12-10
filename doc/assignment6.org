@@ -23,10 +23,18 @@ The page table is a hashmap virtual to physical page indices
 ** DONE Manage user process memory with page table
 
 ** TODO Implement sbrk
+Estimate: 4 hours
+Assignee: Michael
 
 ** TODO Free pages when user processes exit
+Estimate: 2 hours
+Assignee: Michael
 
 ** TODO Come up with a better TLB scheme
+
+** TODO Finish implementation of page_file.c
+Estimate: 4 hours
+Assignee: Michael
 
 ** TODO Use page file
 
@@ -35,9 +43,14 @@ The page table is a hashmap virtual to physical page indices
 * Other improvements
 
 ** TODO Move coremap to its own .h/.c file
+Estimate: 4 hours
+Assignee: Michael
+
 This will help to provide better encapsulation
 - Conversion between coremap indices and physical page numbers is error prone
 - Encapsulation may help with this
+
+** TODO Extend stack dynamically rather than allocating virtual pages up front
 
 * Bugs
 
@@ -67,4 +80,20 @@ Skip tests 9-11
 ** TODO malloctest (3.5 pts)
 Skip tests 9-11
 
+
+** TODO huge (1 pt)
+
+** TODO palin (1 pt)
+
+** TODO matmult (1 pt)
+
+** TODO triplemat (1 pt)
+
+** TODO quintmat (1 pt)
+
+** TODO sort (1 pt)
+
+** TODO triplesort (1 pt)
+
+** TODO quintsort (1 pt)
 

@@ -61,6 +61,8 @@ struct addrspace {
         paddr_t as_stackpbase;
 #else
         page_table as_page_table;
+        vaddr_t as_heap_end;
+        vaddr_t as_heap_start;
         /* Put stuff here for your VM system */
 #endif
 };
