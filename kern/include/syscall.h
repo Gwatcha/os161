@@ -104,7 +104,7 @@ __DEAD void sys__exit(int exitcode);
 /*
  * VM
  */
-int sys_sbrk(void* retval, intptr_t amount);
+int sys_sbrk(int* retval, intptr_t amount);
 
 
 #endif /* _SYSCALL_H_ */
