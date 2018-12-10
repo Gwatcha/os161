@@ -35,16 +35,13 @@
 /* Index of a page on disk */
 typedef int pfid;
 
-/*
- * Returns the index at which the page can be retrieved in future
- * Returns PF_INVALID if it is not possible to suspend a page
- */
 void page_file_bootstrap(void);
 
 /*
  * Writes PAGE_SIZE bytes to disk (if possible).
  * Returns the index at which the page can be retrieved in future.
  * Returns PF_INVALID if it is not possible to write a page to disk.
+ * src is a contiguos section of kernel memory which is at least PAGE_SIZE long.
  */
 pfid page_file_write(const void* src);
 
