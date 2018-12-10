@@ -88,7 +88,6 @@ hardware_pages_available()
 }
 
 static
-UNUSED
 paddr_t
 physical_memory_available()
 {
@@ -97,7 +96,6 @@ physical_memory_available()
 
 
 static
-UNUSED
 page_t
 addr_to_page(unsigned addr)
 {
@@ -105,7 +103,6 @@ addr_to_page(unsigned addr)
 }
 
 static
-UNUSED
 unsigned
 page_to_addr(page_t page)
 {
@@ -113,7 +110,6 @@ page_to_addr(page_t page)
 }
 
 static
-UNUSED
 page_t
 size_to_page_count(size_t size)
 {
