@@ -33,7 +33,7 @@ Assignee: Michael
 ** TODO Come up with a better TLB scheme
 
 ** DONE Finish implementation of page_file.c
-Estimate: 4 hours
+   Estimate: 4 hours
 Assignee: Michael
 
 ** TODO Use page file
@@ -57,7 +57,6 @@ This will help to provide better encapsulation
 * Tests
 
   ~Run all tests with 512 KB of RAM and 5 MB swap.~
-
 ** DONE km1 (10 pts)
 
 ** DONE km2 (10 pts)
@@ -77,13 +76,12 @@ I believe that completing [[Manage kernel process memory with page table]] will 
 ** TODO sbrktest (3.5 pts)
 Skip tests 9-11
 
-** TODO malloctest (3.5 pts)
+** DONE malloctest (3.5 pts)
 Skip tests 9-11
-
 
 ** TODO huge (1 pt)
 
-** TODO palin (1 pt)
+** DONE palin (1 pt)
 
 ** TODO matmult (1 pt)
 
@@ -92,6 +90,7 @@ Skip tests 9-11
 ** TODO quintmat (1 pt)
 
 ** TODO sort (1 pt)
+   * Ran out of memoery
 
 ** TODO triplesort (1 pt)
 
