@@ -73,7 +73,7 @@ I believe that completing [[Manage kernel process memory with page table]] will 
 
 ** TODO multiexec (7.5 pts)
 
-** TODO sbrktest (3.5 pts)
+** DONE sbrktest (3.5 pts)
 Skip tests 9-11
 
 ** DONE malloctest (3.5 pts)
@@ -84,6 +84,49 @@ Skip tests 9-11
 ** DONE palin (1 pt)
 
 ** TODO matmult (1 pt)
+
+** TODO triplemat (1 pt)
+
+** TODO quintmat (1 pt)
+
+** TODO sort (1 pt)
+   * Ran out of memoery
+
+** TODO triplesort (1 pt)
+
+** TODO quintsort (1 pt)
+
+
+* Tests 16MB RAM
+
+  ~Run all tests with 512 KB of RAM and 5 MB swap.~
+** DONE km1 (10 pts)
+
+** DONE km2 (10 pts)
+
+** km3 (10 pts)
+km3 takes a numeric parameter.
+km3 status by testing different powers of two:
+- Passing km3 2048
+- Failing km3 4096
+
+I believe that completing [[Manage kernel process memory with page table]] will allow us to pass km3 with very large inputs.
+
+** DONE forktest (7.5 pts)
+
+** DONE multiexec (7.5 pts)
+
+** DONE sbrktest (3.5 pts)
+Skip tests 9-11
+
+** DONE malloctest (3.5 pts)
+Skip tests 9-11
+
+** TODO huge (1 pt) -- TLB Miss on store
+
+** DONE palin (1 pt)
+
+** TODO matmult (1 pt) -- TLB Miss on store (worked one time ?? )
 
 ** TODO triplemat (1 pt)
 
