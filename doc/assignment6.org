@@ -26,7 +26,7 @@ The page table is a hashmap virtual to physical page indices
 Estimate: 4 hours
 Assignee: Michael
 
-** DONE Free pages when user processes exit
+** TODO Free pages when user processes exit
 Estimate: 2 hours
 Assignee: Michael
 
@@ -56,12 +56,17 @@ This will help to provide better encapsulation
 
 * Tests
 
-  ~Run all tests with 512 KB of RAM and 5 MB swap.~
-** DONE km1 (10 pts)
+Pass 1: Run all tests with 512 KB of RAM and 5 MB swap.
+Pass 2: Re-run all the tests with 16MB of RAM.
+- For any test that passes, give 1/2 the mark of the points assigned for passing it with 512KB.
 
-** DONE km2 (10 pts)
+** 512KB RAM
 
-** km3 (10 pts)
+*** DONE km1 (10 pts)
+
+*** DONE km2 (10 pts)
+
+*** km3 (10 pts)
 km3 takes a numeric parameter.
 km3 status by testing different powers of two:
 - Passing km3 2048
@@ -69,42 +74,40 @@ km3 status by testing different powers of two:
 
 I believe that completing [[Manage kernel process memory with page table]] will allow us to pass km3 with very large inputs.
 
-** TODO forktest (7.5 pts)
+*** TODO forktest (7.5 pts)
 
-** TODO multiexec (7.5 pts)
+*** TODO multiexec (7.5 pts)
 
-** DONE sbrktest (3.5 pts)
+*** TODO sbrktest (3.5 pts)
 Skip tests 9-11
 
-** DONE malloctest (3.5 pts)
+*** DONE malloctest (3.5 pts)
 Skip tests 9-11
 
-** TODO huge (1 pt)
+*** TODO huge (1 pt)
 
-** DONE palin (1 pt)
+*** DONE palin (1 pt)
 
-** TODO matmult (1 pt)
+*** TODO matmult (1 pt)
 
-** TODO triplemat (1 pt)
+*** TODO triplemat (1 pt)
 
-** TODO quintmat (1 pt)
+*** TODO quintmat (1 pt)
 
-** TODO sort (1 pt)
+*** TODO sort (1 pt)
    * Ran out of memoery
 
-** TODO triplesort (1 pt)
+*** TODO triplesort (1 pt)
 
-** TODO quintsort (1 pt)
+*** TODO quintsort (1 pt)
 
+** 16MB RAM
 
-* Tests 16MB RAM
+*** DONE km1 (10 pts)
 
-  ~Run all tests with 512 KB of RAM and 5 MB swap.~
-** DONE km1 (10 pts)
+*** DONE km2 (10 pts)
 
-** DONE km2 (10 pts)
-
-** km3 (10 pts)
+*** km3 (10 pts)
 km3 takes a numeric parameter.
 km3 status by testing different powers of two:
 - Passing km3 2048
@@ -112,29 +115,29 @@ km3 status by testing different powers of two:
 
 I believe that completing [[Manage kernel process memory with page table]] will allow us to pass km3 with very large inputs.
 
-** DONE forktest (7.5 pts)
+*** DONE forktest (7.5 pts)
 
-** DONE multiexec (7.5 pts)
+*** DONE multiexec (7.5 pts)
 
-** DONE sbrktest (3.5 pts)
+*** TODO sbrktest (3.5 pts)
 Skip tests 9-11
 
-** DONE malloctest (3.5 pts)
+*** DONE malloctest (3.5 pts)
 Skip tests 9-11
 
-** TODO huge (1 pt) -- TLB Miss on store
+*** TODO huge (1 pt) -- TLB Miss on store
 
-** DONE palin (1 pt)
+*** DONE palin (1 pt)
 
-** TODO matmult (1 pt) -- TLB Miss on store (worked one time ?? )
+*** TODO matmult (1 pt) -- TLB Miss on store (worked one time ?? )
 
-** TODO triplemat (1 pt)
+*** TODO triplemat (1 pt)
 
-** TODO quintmat (1 pt)
+*** TODO quintmat (1 pt)
 
-** TODO sort (1 pt)
+*** TODO sort (1 pt)
    * Ran out of memoery
 
-** TODO triplesort (1 pt)
+*** TODO triplesort (1 pt)
 
-** TODO quintsort (1 pt)
+*** TODO quintsort (1 pt)
