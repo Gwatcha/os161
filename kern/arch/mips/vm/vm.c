@@ -117,10 +117,22 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		return EFAULT;
 	}
 
+    // check that it is not in the region between the heap and the stack, and that the heap is allocated
+    if ( faultaddress >= as->as_heap_end && faultaddress <= USERSTACK - 18*4096
+            && as->as_heap_end != 0 ) {
+        return EFAULT;
+    }
+
         page_table* pt = &as->as_page_table;
 
         const vpage_t vpage = addr_to_page(faultaddress);
 
+        if (!page_table_contains(pt, vpage)) {
+                kprintf("vm: hard fault! pid %d, vaddr 0x%x\n", pid, faultaddress);
+                return EFAULT;
+        }
+
+        /* check if this region is within the heap  */
         if (!page_table_contains(pt, vpage)) {
                 kprintf("vm: hard fault! pid %d, vaddr 0x%x\n", pid, faultaddress);
                 return EFAULT;

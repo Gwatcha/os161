@@ -144,6 +144,11 @@ as_copy(struct addrspace* old, struct addrspace** ret)
         if (*ret == NULL) {
                 return ENOMEM;
         }
+
+        // copy the heap boundaries
+        (*ret)->as_heap_start = old->as_heap_start;
+        (*ret)->as_heap_end = old->as_heap_end;
+
         page_table* new_pt = &(*ret)->as_page_table;
 
         const page_table* old_pt = &old->as_page_table;

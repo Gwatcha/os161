@@ -8,15 +8,15 @@
 #include <kern/errno.h>
 #include <page_table.h>
 
-  /*
-   * Retval is a pointer to the new ending of the user heap region.
-   * amount indicates the size to extend or shrink the heap by, and must be page aligned.
-   * On error (void *) - 1 is returned and errno is set.
-   *     Preconditions: as->as_heap_start and as->as_heap_end have already been defined
-   *     Errors: ENOMEM, not enough virtual memory to satisfy.
-   *             EINVAL, request would move the break below it's intial value.
-   *     NOTE: Sbrk should is expected to be atomic, so multiple threads in a process may call it.
-   */
+/*
+* Retval is a pointer to the new ending of the user heap region.
+* amount indicates the size to extend or shrink the heap by, and must be page aligned.
+* On error (void *) - 1 is returned and errno is set.
+*     Preconditions: as->as_heap_start and as->as_heap_end have already been defined
+*     Errors: ENOMEM, not enough virtual memory to satisfy.
+*             EINVAL, request would move the break below it's intial value.
+*     NOTE: Sbrk should is expected to be atomic, so multiple threads in a process may call it.
+*/
 int sys_sbrk(int* retval, intptr_t amount) {
 #if OPT_DUMBVM
         (void) retval;
@@ -40,7 +40,7 @@ int sys_sbrk(int* retval, intptr_t amount) {
                 return ENOMEM;
         }
 
-        intptr_t npages = amount / 4096;
+        intptr_t npages = amount / PAGE_SIZE;
         page_table * pt = &as->as_page_table;
         // destroy pages such that the user can not fault on them anymore
         if ( amount < 0 ) {
