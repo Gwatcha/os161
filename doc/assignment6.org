@@ -117,6 +117,7 @@ vm: Ran out of memory! Fatal user mode trap 3 sig 11 (TLB miss on store, epc0x40
 **** [ ] 6  Randomized stress test
 **** [ ] 7  Stress test with particular seed
 
+
 *** TODO huge (1 pt)
 
 *** DONE palin (1 pt)
@@ -142,12 +143,6 @@ vm: Ran out of memory! Fatal user mode trap 3 sig 11 (TLB miss on store, epc0x40
 *** DONE km2 (10 pts)
 
 *** DONE km3 (10 pts)
-km3 takes a numeric parameter.
-km3 status by testing different powers of two:
-- Passing km3 2048
-- Failing km3 4096
-
-I believe that completing [[Manage kernel process memory with page table]] will allow us to pass km3 with very large inputs.
 
 *** DONE forktest (7.5 pts)
 
