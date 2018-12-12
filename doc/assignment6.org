@@ -78,11 +78,44 @@ I believe that completing [[Manage kernel process memory with page table]] will 
 
 *** TODO multiexec (7.5 pts)
 
-*** TODO sbrktest (3.5 pts)
-Skip tests 9-11
+***  14/18 sbrktest (3.5 pts)
+**** [X]  1  Allocate one page
+**** [X]  2  Allocate and free one page
+**** [X]  3  Allocate and free several pages
+**** [X]  4  Allocate several pages and free them one at a time
+**** [X]  5  Check the heap end (crashes)
+**** [X]  6  Allocate and check the heap end (crashes)
+**** [X]  7  Allocate and free and check the heap end (crashes)
+**** [X]  8  Allocate several, free some, check heap end (crashes)
+**** [X] 12  Fork and then allocate
+**** [X] 13  Allocate and then fork
+**** [X] 14  Allocate and then fork and free
+**** [X] 15  Allocate, fork, allocate more, and free (and spam)
+**** [ ] 16  Small stress test
+     Out of memory
+**** [ ] 17  Randomized small stress test
+     Out of memory
+**** [ ] 18  Small stress test with particular seed
+     Out of memory
+**** [ ] 19  Large stress test
+     Out of memory
 
-*** DONE malloctest (3.5 pts)
-Skip tests 9-11
+If you run a test after running one before, it sometimes dosen't work (get could
+not get a page). The X's are assuming the system is freshly booted.
+
+
+
+*** 2/7 malloctest (3.5 pts)
+**** [X] 1  Simple allocation test
+**** [ ] 2  Allocate all memory in a big chunk
+vm: Ran out of memory! Fatal user mode trap 3 sig 11 (TLB miss on store, epc0x4007c4, vaddr 0xbae000)
+**** [ ] 3  Allocate all memory in small chunks
+........................Fatal user mode trap 2 sig 11 (TLB miss on load, epc 0x401620, vaddr 0x451000)
+**** [X] 4  Free list coalescing test (first/next/best-fit only)
+**** [ ] 5  Stress test
+     vm: ran out of memory!
+**** [ ] 6  Randomized stress test
+**** [ ] 7  Stress test with particular seed
 
 *** TODO huge (1 pt)
 
@@ -101,13 +134,14 @@ Skip tests 9-11
 
 *** TODO quintsort (1 pt)
 
+
 ** 16MB RAM
 
 *** DONE km1 (10 pts)
 
 *** DONE km2 (10 pts)
 
-*** km3 (10 pts)
+*** DONE km3 (10 pts)
 km3 takes a numeric parameter.
 km3 status by testing different powers of two:
 - Passing km3 2048
@@ -119,11 +153,40 @@ I believe that completing [[Manage kernel process memory with page table]] will 
 
 *** DONE multiexec (7.5 pts)
 
-*** TODO sbrktest (3.5 pts)
+*** 15/18 sbrktest (3.5 pts)
+**** [X]  1  Allocate one page
+**** [X]  2  Allocate and free one page
+**** [X]  3  Allocate and free several pages
+**** [X]  4  Allocate several pages and free them one at a time
+**** [X]  5  Check the heap end (crashes)
+**** [X]  6  Allocate and check the heap end (crashes)
+**** [X]  7  Allocate and free and check the heap end (crashes)
+**** [X]  8  Allocate several, free some, check heap end (crashes)
+**** [X] 12  Fork and then allocate
+**** [X] 13  Allocate and then fork
+**** [X] 14  Allocate and then fork and free
+**** [X] 15  Allocate, fork, allocate more, and free (and spam)
+**** [X] 16  Small stress test
+**** [X] 17  Randomized small stress test
+**** [X] 18  Small stress test with particular seed
+**** [ ] 19  Large stress test
+**** [ ] 20  Randomized large stress test
+**** [ ] 21  Large stress test with particular seed
+
+
+*** 5/7 malloctest (3.5 pts)
+**** [X] 1  Simple allocation test
+**** [ ] 2  Allocate all memory in a big chunk
+vm: Ran out of memory! Fatal user mode trap 3 sig 11 (TLB miss on store, epc0x4007c4, vaddr 0xbae000)
+**** [ ] 3  Allocate all memory in small chunks
+........................Fatal user mode trap 2 sig 11 (TLB miss on load, epc 0x401620, vaddr 0x451000)
+**** [X] 4  Free list coalescing test (first/next/best-fit only)
+**** [X] 5  Stress test
+**** [X] 6  Randomized stress test
+**** [X] 7  Stress test with particular seed
+
 Skip tests 9-11
 
-*** DONE malloctest (3.5 pts)
-Skip tests 9-11
 
 *** TODO huge (1 pt) -- TLB Miss on store
 
@@ -141,3 +204,33 @@ Skip tests 9-11
 *** TODO triplesort (1 pt)
 
 *** TODO quintsort (1 pt)
+
+* Khdump
+** After Multiexec 16MB
+Remaining allocations from generation 3:
+   16 bytes at 0x80045d70, allocated at 0x80012de0
+   16 bytes at 0x80045eb0, allocated at 0x8000a7f0
+   16 bytes at 0x80045ec0, allocated at 0x80021dbc
+   16 bytes at 0x80045ed0, allocated at 0x8000a7f0
+   16 bytes at 0x80045ee0, allocated at 0x80021dbc
+   32 bytes at 0x8004f5a0, allocated at 0x80012de0
+   32 bytes at 0x8004f5c0, allocated at 0x80012de0
+   32 bytes at 0x8004f5e0, allocated at 0x80012de0
+   32 bytes at 0x8004f600, allocated at 0x800218d0
+   32 bytes at 0x8004f620, allocated at 0x8000a4d0
+   32 bytes at 0x8004f640, allocated at 0x8001162c
+   32 bytes at 0x8004f660, allocated at 0x80012de0
+   32 bytes at 0x8004f680, allocated at 0x8001162c
+   32 bytes at 0x8004f6a0, allocated at 0x80012de0
+   32 bytes at 0x8004f6c0, allocated at 0x80012de0
+   32 bytes at 0x8004f6e0, allocated at 0x800218d0
+   32 bytes at 0x8004f700, allocated at 0x8000a4d0
+   32 bytes at 0x8004f720, allocated at 0x8001162c
+   32 bytes at 0x8004f840, allocated at 0x8001162c
+panic: Fatal exception 4 (Address error on load) in kernel mode
+panic: EPC 0x8002b854, exception vaddr 0x8005cfff
+panic: I can't handle this... I think I'll just die now...
+** After palin 16B
+Remaining allocations from generation 3:
+   32 bytes at 0x8004f840, allocated at 0x8001162c
+panic: Fatal exception 4 (Address error on load) in kernel mode
